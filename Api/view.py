@@ -4,6 +4,8 @@ import json
 from django.shortcuts import render
 from django.http.response import HttpResponse
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate,login,logout
+from django.views.decorators.csrf import csrf_exempt
 
 from Question.models import *
 
@@ -79,3 +81,28 @@ def regist(request):
         return HttpResponse('注册成功')
 
     return HttpResponse('注册用户')
+
+@csrf_exempt
+def login_user(request):
+    method = request.method
+    # 用户错误信息
+    errors = dict()
+    if method=="POST":
+        username = request.POST.get('username','')
+        password = request.POST.get('password','')
+    # 判断用户是否存在
+        user = authenticate(username=username,password=password)
+        if not user:
+            errors['username']= '用户名或密码错误'
+            return HttpResponse(json.dumps(errors),content_type='application/json')
+        login(request,user)
+        return HttpResponse('登录成功')
+    else:
+        return HttpResponse('方法不支持')
+
+def login_page(request):
+    return render(request, 'user/login.html')
+
+
+def logout(request):
+    pass
