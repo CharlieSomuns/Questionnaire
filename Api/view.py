@@ -11,6 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from Question.models import *
 from Api.resources import Resource
 from Api.utils import *
+from Api.decorators import customer_required
 
 
 # 获取注册码
@@ -209,3 +210,23 @@ class SessionResource(Resource):
         return json_response({
             'msg': '退出成功'
         })
+
+
+# 问卷资源
+class QuestionnaireResource(Resource):
+    
+    @customer_required
+    def get(self, request, *args, **kwargs):
+        return json_response({})
+
+    @customer_required
+    def put(self, request, *args, **kwargs):
+        return json_response({})
+
+    @customer_required
+    def post(self, request, *args, **kwargs):
+        return json_response({})
+
+    @customer_required
+    def delete(self, request, *args, **kwargs):
+        return json_response({})
