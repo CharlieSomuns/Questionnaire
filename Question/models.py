@@ -34,7 +34,7 @@ class UserInfo(models.Model):
     phone=models.CharField(max_length=16,blank=True,null=True,help_text="手机号码")
     email=models.EmailField(blank=True,null=True,help_text="邮箱")
     address=models.CharField(max_length=256,blank=True,null=True,help_text="地址")
-    birthday=models.DateField(null=True,help_text="出生日期")
+    birthday=models.DateField(auto_now=True,null=True,help_text="出生日期")
     qq=models.CharField(max_length=16,blank=True,null=True,help_text="QQ")
     wechat=models.CharField(max_length=64,blank=True,null=True,help_text="微信号")
     job=models.CharField(max_length=32,blank=True,null=True,help_text="职业")
