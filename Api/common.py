@@ -99,6 +99,10 @@ class UserResource(Resource):
                 userinfo.job = data.get('job', '')
                 userinfo.salary = data.get('salary', '')
                 # 这里还没有保存图片
+                photo = request.FILES.get('photo', False)
+                if photo:
+                    file_path = upload_file(
+                        'userinfo/{user_id}'.format(user_id=user.id), photo)
                 userinfo.save()
 
             elif hasattr(user, 'customer'):
