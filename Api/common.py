@@ -29,18 +29,21 @@ class UserResource(Resource):
                 # 构建json字典
                 data = dict()
                 data['user'] = user.id
-                data['age'] = userinfo.get('age', '')
-                data['name'] = userinfo.get('name', '')
-                data['gender'] = userinfo.get('gender', '')
-                data['phone'] = userinfo.get('phone', '')
-                data['email'] = userinfo.get('email', '')
-                data['address'] = userinfo.get('address', '')
-                data['birthday'] = datetime.strftime(
-                    userinfo.get('birthday', datetime.now()), "%Y-%m-%d")
-                data['qq'] = userinfo.get('qq', '')
-                data['wechat'] = userinfo.get('wechat', '')
-                data['job'] = userinfo.get('job', '')
-                data['salary'] = userinfo.get('salary', '')
+                data['age'] = getattr(userinfo, 'age', '')
+                data['name'] = getattr(userinfo, 'name', '')
+                data['gender'] = getattr(userinfo, 'gender', '')
+                data['phone'] = getattr(userinfo, 'phone', '')
+                data['email'] = getattr(userinfo, 'email', '')
+                data['address'] = getattr(userinfo, 'address', '')
+                birthday = userinfo.birthday
+                if birthday:
+                    data['birthday'] = birthday.strftime("%Y-%m-%d")
+                else:
+                    data['birthday'] = datetime.now().strftime("%Y-%m-%d")
+                data['qq'] = getattr(userinfo, 'qq', '')
+                data['wechat'] = getattr(userinfo, 'wechat', '')
+                data['job'] = getattr(userinfo, 'job', '')
+                data['salary'] = getattr(userinfo, 'salary', '')
                 # 用json把data转化成字符串,返回给客户端
                 return json_response(data)
             # 判断是否是客户
@@ -49,17 +52,17 @@ class UserResource(Resource):
                 # 构建json字典
                 data = dict()
                 data['user'] = user.id
-                data['name'] = customer.get('name', '')
-                data['email'] = customer.get('email', '')
-                data['company'] = customer.get('company', '')
-                data['address'] = customer.get('address', '')
-                data['phone'] = customer.get('phone', '')
-                data['mobile'] = customer.get('mobile', '')
-                data['qq'] = customer.get('qq', '')
-                data['wechat'] = customer.get('wechat', '')
-                data['web'] = customer.get('web', '')
-                data['industry'] = customer.get('industry', '')
-                data['description'] = customer.get('description', '')
+                data['name'] = getattr(customer, 'name', '')
+                data['email'] = getattr(customer, 'email', '')
+                data['company'] = getattr(customer, 'company', '')
+                data['address'] = getattr(customer, 'address', '')
+                data['phone'] = getattr(customer, 'phone', '')
+                data['mobile'] = getattr(customer, 'mobile', '')
+                data['qq'] = getattr(customer, 'qq', '')
+                data['wechat'] = getattr(customer, 'wechat', '')
+                data['web'] = getattr(customer, 'web', '')
+                data['industry'] = getattr(customer, 'industry', '')
+                data['description'] = getattr(customer, 'description', '')
                 # 用json把data转化称字符串,返回给客户端
                 return json_response(data)
             else:
