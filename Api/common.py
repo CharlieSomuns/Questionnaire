@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.db.transaction import atomic
 from django.contrib.auth.models import User
 
-from Api.utils import json_response, params_error
+from Api.utils import *
 from Api.resources import Resource
 from Question.models import *
 
@@ -14,11 +14,7 @@ class RegistCodeResource(Resource):
         regist_code = random.randint(10000, 100000)
         request.session['regist_code'] = regist_code
         return json_response({
-            "state": 200,
-            "msg": 'OK',
-            "data": {
-                "regist_code": regist_code
-            }
+            "regist_code": regist_code
         })
 
 
@@ -82,11 +78,7 @@ class UserResource(Resource):
             customer.save()
 
         return json_response({
-            'state': 200,
-            'msg': 'OK',
-            'data': {
-                "user_id": user.id
-            }
+            "user_id": user.id
         })
 
 
@@ -94,13 +86,9 @@ class SessionResource(Resource):
     def get(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             return json_response({
-                "state": 200,
-                'msg': 'OK'
+                "user_id": request.user.id
             })
-        return json_response({
-            "state": 401,
-            'msg': 'require login'
-        })
+        return response_401()
 
     def put(self, request, *args, **kwargs):
         data = request.PUT
@@ -114,16 +102,11 @@ class SessionResource(Resource):
             return params_error(errors)
         login(request, user)
         return json_response({
-            'state': 200,
-            'msg': 'OK',
+            "session": "登录成功"
         })
 
     def delete(self, request, *args, **kwargs):
         logout(request)
         return json_response({
-            'state': 200,
-            'msg': 'OK',
-            "data": {
-                "session": "退出成功"
-            }
+            "session": "退出成功"
         })
