@@ -14,6 +14,8 @@ class MethodConvertMiddleware(MiddlewareMixin):
             data, files = MultiPartParser(
                 request.META, request, request.upload_handlers).parse()
             setattr(request, method.upper()+'_FILES', files)
+        else:
+            data = {}
         setattr(request, method, data)
         if 'HTTP_X_METHOD' in request.META:
             setattr(request, 'method', method)
