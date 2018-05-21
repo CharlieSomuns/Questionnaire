@@ -175,7 +175,7 @@ class UserResource(Resource):
             customer.user = user
             customer.name = "客户名称"
             customer.save()
-
+        login(request, user)
         return json_response({
             "user_id": user.id
         })
