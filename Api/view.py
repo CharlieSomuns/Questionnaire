@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from Question.models import *
 from Api.resources import Resource
+from Api.utils import *
 
 
 # 获取注册码
@@ -76,7 +77,7 @@ class UserResource(Resource):
                 }), content_type="application/json")
         # 用户未登录,不允许查看信息
         return HttpResponse(json.dumps({
-            "data": {}
+            "msg": '未登录'
         }), content_type="application/json")
 
     # 注册用户
@@ -119,7 +120,7 @@ class UserResource(Resource):
             customer.name = '客户名称'
             customer.user = user
             customer.save()
-            
+
         return HttpResponse(json.dumps({
             "msg": "创建成功",
             "user_id": user.id
@@ -127,4 +128,84 @@ class UserResource(Resource):
 
     # 更新用户
     def post(self, request, *args, **kwargs):
-        pass
+        data = request.POST
+        user = request.user
+        if user.is_authenticated:
+            # 判断是否是普通用户
+            if hasattr(user, 'userinfo'):
+                userinfo = user.userinfo
+                userinfo.name = data.get('name', '姓名')
+                userinfo.age = data.get('age', '')
+                userinfo.gender = data.get('gender', '')
+                userinfo.phone = data.get('phone', '')
+                userinfo.email = data.get('email', '')
+                userinfo.address = data.get('address', '')
+
+                # 时间特殊处理
+                try:
+                    birthday = datetime.strptime(
+                        data.get('birthday', '2018-01-01'), "%Y-%m-%d")
+                except Exception as e:
+                    birthday = datetime.now()
+
+                userinfo.birthday = birthday
+
+                userinfo.qq = data.get('qq', '')
+                userinfo.wechat = data.get('wechat', '')
+                userinfo.job = data.get('job', '')
+                userinfo.salary = data.get('salary', '')
+                userinfo.save()
+            # 判断是否是客户
+            elif hasattr(user, 'customer'):
+                customer = user.customer
+                customer.name = data.get('name', '客户名称')
+                customer.email = data.get('email', '')
+                customer.company = data.get('company', '')
+                customer.address = data.get('address', '')
+                customer.phone = data.get('phone', '')
+                customer.mobile = data.get('mobile', '')
+                customer.qq = data.get('qq', '')
+                customer.wechat = data.get('wechat', '')
+                customer.web = data.get('web', '')
+                customer.industry = data.get('industry', '')
+                customer.description = data.get('description', '')
+                customer.save()
+            return HttpResponse(json.dumps({
+                'msg': '更新成功'
+            }), content_type="application/json")
+        return HttpResponse(json.dumps({
+            'msg': '还未登录'
+        }), content_type="application/json")
+
+
+# 用户登录与退出
+class SessionResource(Resource):
+
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            return json_response({
+                'msg': '已经登录'
+            })
+        return json_response({
+            'msg': '还未登录'
+        })
+
+    def put(self, request, *args, **kwargs):
+        data = request.PUT
+        username = data.get('username', '')
+        password = data.get('password', '')
+        user = authenticate(username=username, password=password)
+        if user:
+            login(request, user)
+            return json_response({
+                'msg': '登录成功'
+            })
+        return json_response({
+            'msg': '用户名或密码错误'
+        })
+
+    def delete(self, request, *args, **kwargs):
+        logout(request)
+        return json_response({
+            'msg': '退出成功'
+        })
