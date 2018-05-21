@@ -5,6 +5,7 @@ __pycache__/
 *$py.class
 *DS_Store
 # C extensions
+Upload/
 *.so
 *migrations/
 # Distribution / packaging
