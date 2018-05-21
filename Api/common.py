@@ -20,6 +20,7 @@ class RegistCodeResource(Resource):
 
 
 class UserResource(Resource):
+    # 获取用户信息
     def get(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             user = request.user
@@ -71,10 +72,13 @@ class UserResource(Resource):
         # 用户未登录,不允许查看信息
         return not_authenticated()
 
+
+    # 更新用户信息
     @atomic
     def post(self, request, *args, **kwargs):
-        pass
+        return json_response()
 
+    # 注册用户
     @atomic
     def put(self, request, *args, **kwargs):
         data = request.PUT
@@ -132,6 +136,7 @@ class UserResource(Resource):
 
 
 class SessionResource(Resource):
+    # 获取session信息
     def get(self, request, *args, **kwargs):
         if request.user.is_authenticated:
             return json_response({
@@ -139,6 +144,7 @@ class SessionResource(Resource):
             })
         return not_authenticated()
 
+    # 用户登录
     def put(self, request, *args, **kwargs):
         data = request.PUT
         errors = dict()
@@ -154,6 +160,7 @@ class SessionResource(Resource):
             "session": "登录成功"
         })
 
+    # 用户退出
     def delete(self, request, *args, **kwargs):
         logout(request)
         return json_response({
