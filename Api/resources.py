@@ -14,24 +14,12 @@ class Resource(object):
     enter方法是资源的入口,根据method类型分别调用不同的处理方法
     """
 
-    def __new__(cls, *args, **kwargs):
-        """
-        # 单例模式
-        > 当通过类实例化对象时,无论实例化多少,他们返回的都是一个对象
-        """
-        if hasattr(cls, '_instance'):
-            return cls._instance
-        else:
-            instance = super(Resource, cls).__new__(cls)
-            cls._instance = instance
-            return instance
-
     def __init__(self, name=None):
         """
         - name 资源名称
         例如: session
         """
-        self.name = name
+        self.name = name or self.__class__.__name__.lower()
 
     def enter(self, request, *args, **kwargs):
         """
@@ -85,19 +73,12 @@ class Resource(object):
 class Register(object):
     """
     # 注册器  
-    
+
     默认接受一个接口版本号v1,可以自定义版本号
 
     在跟路由中使用方式:  
     url(r'^api/',include(register.urls))
     """
-    def __new__(cls, *args, **kwargs):
-        if hasattr(cls, '_instance'):
-            return cls._instance
-        else:
-            instance = super(Register, cls).__new__(cls)
-            cls._instance = instance
-            return instance
 
     def __init__(self, version='v1'):
         self.version = version
@@ -108,7 +89,7 @@ class Register(object):
         # 注册资源
         """
         if not isinstance(resource, Resource):
-            raise Exception('resource 必须继承自 Resource')
+            raise Exception('resource 必须继承自 Resource,并且是一个Resource对象')
         else:
             self.resources.append(resource)
 
@@ -119,8 +100,5 @@ class Register(object):
         """
         urlpatterns = []
         for resource in self.resources:
-            urlpatterns.append(url(r'^{version}/{name}$'.format(
-                version=self.version, name=resource.name or resource.__class__.__name__.lower()),  csrf_exempt(resource.enter)))
+            urlpatterns.append(url(r'^{version}/{name}$'.format(version=self.version, name=resource.name),  csrf_exempt(resource.enter)))
         return urlpatterns
-
-
