@@ -1,6 +1,7 @@
 import json
 import uuid
 import os
+import math
 
 from django.http.response import HttpResponse
 
@@ -78,3 +79,14 @@ def upload_file(path, file):
         for chunk in file.chunks():
             of.write(chunk)
     return os.path.join(path, saved_name)
+
+
+class PageCutter(object):
+    def __init__(self, query_set, limit=15):
+        self.query_set = query_set
+        self.limit = limit
+        all_data = query_set.all()
+        count = all_data.count()
+        self.pages = math.ceil(count/limit)
+        self.current_page = 1
+        self.count = count
