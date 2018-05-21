@@ -10,4 +10,5 @@ api.regist(RegistCodeResource('regist_code'))
 api.regist(UserResource('user'))
 api.regist(SessionResource('session'))
 
-api.regist(QuestinnareResource('customer_questionnaire'))
+api.regist(QuestionnaireResource('customer_questionnaire'))
+api.regist(QuestionResource('customer_question'))
