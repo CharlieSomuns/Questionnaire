@@ -8,22 +8,50 @@ from QuestionNaire.settings import BASE_DIR
 # from Question.models import Image
 
 
+# 创建一个唯一字符串
 def create_uuid():
     return uuid.uuid1().hex
 
 
-def json_response(data):
-    json_data = json.dumps(data)
+# 成功返回
+def json_response(data={}):
+    json_data = {
+        'state': 200,
+        'msg': 'OK',
+        'data': data
+    }
+    json_data = json.dumps(json_data)
     return HttpResponse(json_data, content_type='application/json')
 
 
+# 如果用户未登录
+def require_login():
+    data = {
+        'state': 401,
+        'msg': '未登录'
+    }
+    return HttpResponse(json.dumps(data), content_type="application/json")
+
+
+# 如果用户没有权限
+def permission_denied():
+    data = {
+        'state': 403,
+        'msg': '没有权限'
+    }
+    return HttpResponse(json.dumps(data), content_type="application/json")
+
+
+# 方法不支持
 def method_not_allowed():
-    return HttpResponse(json.dumps({
+    data = {
         'state': 405,
-        'msg': 'method not allowed'
-    }), content_type="application/json")
+        'msg': '方法不支持'
+    }
+    return HttpResponse(json.dumps(data), content_type="application/json")
 
 
+# 请求参数错误
 def params_error(errors):
     return HttpResponse(json.dumps({
         'state': 422,
