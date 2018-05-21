@@ -4,7 +4,7 @@ import os
 
 from django.http.response import HttpResponse
 
-from QuestionNaire.settings import BASE_DIR
+from QuestionNaire.settings import UPLOAD_DIR
 # from Question.models import Image
 
 
@@ -60,24 +60,21 @@ def params_error(errors):
     }), content_type="application/json")
 
 
-# def upload_img(path, file):
-#     """
-#     # 保存图片
-#     - path:保存路径,例如: product/1/
-#     - file:客户端上传的文件,从request.FILES中读取出来
-#     """
-#     saved_name = create_uuid()
-#     parent_dir = os.path.join(BASE_DIR, 'Upload', path)
-#     file_path = os.path.join(BASE_DIR, 'Upload', path, saved_name)
-#     if not os.path.isdir(parent_dir):
-#         os.makedirs(parent_dir)
-#     with open(file_path, 'wb') as of:
-#         for chunk in file.chunks():
-#             of.write(chunk)
-#     img = Image()
-#     img.path = path+saved_name
-#     img.size = file.size
-#     img.filename = file.name
-#     img.saved_name = saved_name
-#     img.save()
-#     return img
+def upload_file(path, file):
+    """
+    # 保存图片
+    - path:保存路径,例如: userinfo/1/
+    - file:客户端上传的文件,从request.FILES中读取出来
+    """
+    if path.startswith('/'):
+        path = path[1:]
+    saved_name = create_uuid()
+    file_name = path
+    parent_dir = os.path.join(UPLOAD_DIR, path)
+    file_path = os.path.join(UPLOAD_DIR, path, saved_name)
+    if not os.path.isdir(parent_dir):
+        os.makedirs(parent_dir)
+    with open(file_path, 'wb') as of:
+        for chunk in file.chunks():
+            of.write(chunk)
+    return os.path.join(path, saved_name)
