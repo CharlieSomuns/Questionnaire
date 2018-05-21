@@ -108,7 +108,7 @@ class QuestionnaireComment(models.Model):
     """
     # 问卷审核
     """
-    questionnaire=models.ForeignKey('Questionnaire',help_text="问卷")
+    questionnaire=models.ForeignKey('Questionnaire',help_text="问卷",on_delete=models.CASCADE)
     datetime=models.DateTimeField(auto_now=True,help_text="审核时间")
     comment=models.TextField(help_text="审核批注")
 
@@ -117,7 +117,7 @@ class Question(models.Model):
     """
     # 题目
     """
-    questionnaire=models.ForeignKey('Questionnaire',help_text="问卷")
+    questionnaire=models.ForeignKey('Questionnaire',help_text="问卷",on_delete=models.CASCADE)
     title=models.CharField(max_length=128,help_text="题纲")
     is_checkbox=models.BooleanField(default=False,help_text="是否多选")
 
@@ -125,7 +125,7 @@ class QuestionItem(models.Model):
     """
     # 题目选项
     """
-    question=models.ForeignKey('Question',help_text="题目")
+    question=models.ForeignKey('Question',help_text="题目",on_delete=models.CASCADE)
     content=models.CharField(max_length=32,help_text="选项内容")
 
 class Mark(models.Model):
