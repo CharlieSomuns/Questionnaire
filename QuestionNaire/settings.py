@@ -78,7 +78,7 @@ WSGI_APPLICATION = 'QuestionNaire.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'questionnaire',
+        'NAME': 'questionnaire_dev',
         'USER': 'django',
         'PASSWORD': 'djangopwd',
         'HOST': 'localhost',
