@@ -25,7 +25,7 @@ def json_response(data={}):
 
 
 # 如果用户未登录
-def require_login():
+def not_authenticated():
     data = {
         'state': 401,
         'msg': '未登录'
