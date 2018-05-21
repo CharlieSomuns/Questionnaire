@@ -72,11 +72,53 @@ class UserResource(Resource):
         # 用户未登录,不允许查看信息
         return not_authenticated()
 
-
     # 更新用户信息
+
     @atomic
     def post(self, request, *args, **kwargs):
-        return json_response()
+        if request.user.is_authenticated:
+            user = request.user
+            # 判断是否是普通用户
+            data = request.POST
+            if hasattr(user, 'userinfo'):
+                userinfo = user.userinfo
+                userinfo.name = data.get('name', '姓名')
+                userinfo.age = data.get('age', 1)
+                userinfo.gender = data.get('gender', 'male')
+                userinfo.phone = data.get('phone', '')
+                userinfo.email = data.get('email', '')
+                userinfo.address = data.get('address', '')
+                try:
+                    birthday = datetime.strptime(
+                        data.get('birthday', ''), "%Y-%m-%d")
+                except Exception:
+                    birthday = datetime.strptime('2018-01-01', "%Y-%m-%d")
+                userinfo.birthday = birthday
+                userinfo.qq = data.get('qq', '')
+                userinfo.wechat = data.get('wechat', '')
+                userinfo.job = data.get('job', '')
+                userinfo.salary = data.get('salary', '')
+                # 这里还没有保存图片
+                userinfo.save()
+
+            elif hasattr(user, 'customer'):
+                customer = user.customer
+                customer.name = data.get('name', '客户名称')
+                customer.email = data.get('email', '')
+                customer.company = data.get('company', '')
+                customer.address = data.get('address', '')
+                customer.phone = data.get('phone', '')
+                customer.mobile = data.get('mobile', '')
+                customer.qq = data.get('qq', '')
+                customer.wechat = data.get('wechat', '')
+                customer.web = data.get('web', '')
+                customer.industry = data.get('industry', '')
+                customer.description = data.get('description', '')
+                customer.save()
+            else:
+                return json_response({})
+            return json_response({})
+        return not_authenticated()
 
     # 注册用户
     @atomic
