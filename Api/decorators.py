@@ -15,3 +15,11 @@ def userinfo_required(func):
             return func(self, request, *args, **kwargs)
         return permission_denied()
     return _wrapper
+
+
+def superuser_required(func):
+    def _wrapper(self, request, *args, **kwargs):
+        if request.user.is_superuser:
+            return func(self, request, *args, **kwargs)
+        return permission_denied()
+    return _wrapper
