@@ -93,8 +93,8 @@ class Questionnaire(models.Model):
     # 连接到Image对象
     logo=models.CharField(max_length=64,help_text="logo")
 
-    datetime=models.DateTimeField(auto_now=True,help_text="创建时间")
-    deadline=models.DateTimeField(auto_now=True,help_text="截止时间")
+    datetime=models.DateTimeField(help_text="创建时间")
+    deadline=models.DateTimeField(help_text="截止时间")
     catogory=models.CharField(max_length=16,blank=True,null=True,help_text="类别")
     state=models.IntegerField(default=0,help_text="""状态,0-->草稿,1-->待审核,2-->审核失败,
                                                         3-->审核成功,4-->发布成功""")
