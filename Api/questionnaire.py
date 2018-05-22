@@ -58,7 +58,7 @@ class QuestionnaireResource(Resource):
                 dict_item['questions'].append(
                     {
                         'id': question.id,
-                        'is_checkbox':question.is_checkbox,
+                        'is_checkbox': question.is_checkbox,
                         'items': [item.content for item in question.questionitem_set.all()]
                     }
                 )
@@ -167,8 +167,8 @@ class QuestionResource(Resource):
             qitem.question = question
             qitem.content = item
             qitem.save()
-        questionnaire=question.questionnaire
-        questionnaire.state=0
+        questionnaire = question.questionnaire
+        questionnaire.state = 0
         questionnaire.save()
         return json_response()
 
@@ -194,7 +194,7 @@ class QuestionResource(Resource):
             qitem.question = question
             qitem.content = item
             qitem.save()
-        questionnaire.state=0
+        questionnaire.state = 0
         questionnaire.save()
         return json_response({
             'id': question.id
@@ -217,3 +217,82 @@ class QuestionResource(Resource):
         return json_response({
             'deleted_ids': deleted_ids
         })
+
+
+class QuestionnaireCommentResource(Resource):
+    @customer_required
+    def get(self, request, *args, **kwargs):
+        return json_response()
+
+    @atomic
+    @superuser_required
+    def put(self, request, *args, **kwargs):
+        return json_response()
+
+
+class QuestionnaireStateResource(Resource):
+    @atomic
+    @customer_required
+    def post(self, request, *args, **kwargs):
+        return json_response()
+
+
+class AnswerResource(Resource):
+
+    @userinfo_required
+    def get(self, request, *args, **kwargs):
+        return json_response()
+
+    @atomic
+    @userinfo_required
+    def put(self, request, *args, **kwarg):
+        return json_response()
+
+    @atomic
+    @userinfo_required
+    def post(self, request, *args, **kwargs):
+        return json_response()
+
+    @atomic
+    @userinfo_required
+    def delete(self, request, *args, **kwargs):
+        return json_response()
+
+
+class AnswerItemResource(Resource):
+    @userinfo_required
+    def get(self, request, *args, **kwargs):
+        return json_response()
+
+    @atomic
+    @userinfo_required
+    def put(self, request, *args, **kwargs):
+        return json_response()
+
+    @atomic
+    @userinfo_required
+    def post(self, request, *args, **kwargs):
+        return json_response()
+
+
+class QuestionnaireSuggestResource(Resource):
+
+    @atomic
+    @userinfo_required
+    def put(self, request, *args, **kwargs):
+        return json_response()
+
+    @userinfo_required
+    def get(self, request, *args, **kwargs):
+        return json_response()
+
+
+class ShareHistoryResource(Resource):
+    @atomic
+    @userinfo_required
+    def put(self, request, *args, **kwargs):
+        return json_response()
+
+    @userinfo_required
+    def get(self, request, *args, **kwargs):
+        return json_response()
