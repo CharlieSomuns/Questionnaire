@@ -13,7 +13,7 @@ from django.db.models import Q
 from Question.models import *
 from Api.resources import Resource
 from Api.utils import *
-from Api.decorators import customer_required
+from Api.decorators import *
 
 
 # 获取注册码
@@ -221,7 +221,7 @@ class QuestionnaireResource(Resource):
     def get(self, request, *args, **kwargs):
         data = request.GET
         state = data.get('state', False)
-        limit = data.get('limit', 15)
+        limit = abs(int(data.get('limit', 15)))
         start_id = data.get('start_id', False)
         title = data.get('title', False)
         create_time = data.get('create_time', False)
@@ -248,7 +248,10 @@ class QuestionnaireResource(Resource):
 
         Qs.append(Q(customer=request.user.customer))
 
-        objs = Questionnaire.objects.filter(*Qs)
+        if limit > 50:
+            limit = 50
+
+        objs = Questionnaire.objects.filter(*Qs)[:limit]
 
         data = []
         for obj in objs:
@@ -337,19 +340,13 @@ class QuestionnaireResource(Resource):
     def post(self, request, *args, **kwargs):
         data = request.POST
         questionnaire_id = int(data.get('questionnaire_id', 0))
-        questionnaire = Questionnaire.objects.get(id=questionnaire_id)
-
-        state = int(data.get('state', 0))
-        errors = dict()
-        if questionnaire.customer != request.user.customer:
-            errors['questionnaire_id'] = "不可以更新当前问卷"
-        if questionnaire.state == 4:
-            errors['questionnaire_id'] = "当前问卷已经发布,不可以更新"
-        # 判断客户端上传的状态是否合法
-        if state in [2, 3, 4]:
-            errors['state'] = '只能保存或者提交问卷'
-        if errors:
-            return params_error(errors)
+        try:
+            questionnaire = Questionnaire.objects.get(
+                id=questionnaire_id, customer=request.user.customer, state__in=[0, 1, 2, 3])
+        except Exception as e:
+            return params_error({
+                'questionnaire_id': "找不到对应的问卷,或者问卷不可修改"
+            })
         questionnaire.title = data.get('title', '标题')
         questionnaire.logo = data.get('logo', '')
         # 特殊处理 截止时间
@@ -363,6 +360,11 @@ class QuestionnaireResource(Resource):
             deadline = datetime.now()+timedelta(days=10)
         questionnaire.deadline = deadline
 
+        state = int(data.get('state', 0))
+        if state not in [0, 1]:
+            return params_error({
+                'state': '状态不合法'
+            })
         questionnaire.catogory = data.get('catogory', '')
         # 特殊state
         questionnaire.state = state
@@ -424,9 +426,9 @@ class QuestionResource(Resource):
         items = data.get('items', [])
 
         for item in items:
-            question_item=QuestionItem()
-            question_item.question=question
-            question_item.content=item
+            question_item = QuestionItem()
+            question_item.question = question
+            question_item.content = item
             question_item.save()
 
         return json_response({
@@ -436,9 +438,131 @@ class QuestionResource(Resource):
     @atomic
     @customer_required
     def post(self, request, *args, **kwargs):
-        return json_response({})
+        data = request.POST
+        question_id = data.get('question_id', 0)
+        # 判断需要修改的问题是否存在
+        question_exits = Question.objects.filter(id=question_id, questionnaire__state__in=[
+                                                 0, 1, 2, 3], questionnaire__customer=request.user.customer)
+        if not question_exits:
+            return params_error({
+                'question_id': "该问题找不到,或者该问题所在问卷无法修改"
+            })
+        # 更新问题的属性
+        question = question_exits[0]
+        question.title = data.get('title', '题纲')
+        question.is_checkbox = data.get('is_checkbox', False)
+        question.save()
+        # 更新问题所在问卷的状态
+        questionnaire = question.questionnaire
+        questionnaire.state = 0
+        questionnaire.save()
+
+        items = data.get('items', [])
+        question.questionitem_set.all().delete()
+        for item in items:
+            question_item = QuestionItem()
+            question_item.question = question
+            question_item.content = item
+            question_item.save()
+
+        return json_response({
+            'question': '更新成功'
+        })
 
     @atomic
     @customer_required
     def delete(self, request, *args, **kwargs):
-        return json_response({})
+        data = request.DELETE
+        ids = data.get('ids', [])
+        objs = Question.objects.filter(id__in=ids, questionnaire__state__in=[
+            0, 1, 2, 3], questionnaire__customer=request.user.customer)
+
+        deleted_ids = [obj.id for obj in objs]
+
+        questionnaire_set = set()
+        for obj in objs:
+            questionnaire_set.add(obj.questionnaire)
+
+        for questionnaire in questionnaire_set:
+            questionnaire.state = 0
+            questionnaire.save()
+        objs.delete()
+        return json_response({
+            'deleted_ids': deleted_ids
+        })
+
+
+class QuestionnaireCommentResource(Resource):
+    @atomic
+    @superuser_required
+    def put(self, request, *arg, **kwargs):
+        data = request.PUT
+        questionnaire_id = data.get('questionnaire_id')
+        questionnaire_exits = Questionnaire.objects.filter(
+            id=questionnaire_id, state=1)
+        if not questionnaire_exits:
+            return params_error({
+                'questionnaire_id': '该问卷找不到,或者不可审核'
+            })
+        questionnaire = questionnaire_exits[0]
+        is_agree = data.get('is_agree', False)
+        comment = data.get('comment', '')
+        if is_agree:
+            questionnaire.state = 3
+            questionnaire.save()
+            return json_response({
+                'comment': '审核通过'
+            })
+        if comment:
+            questionnaire.state = 2
+            questionnaire.save()
+            questionnaire_comment = QuestionnaireComment()
+            questionnaire_comment.datetime = datetime.now()
+            questionnaire_comment.comment = comment
+            questionnaire_comment.questionnaire = questionnaire
+            questionnaire_comment.save()
+            return json_response({
+                'comment': '提交审核内容成功'
+            })
+        return params_error({
+            'comment': '没有提供审核信息'
+        })
+
+    @customer_required
+    def get(self, request, *args, **kwargs):
+        data = request.GET
+        questionnaire_id = data.get('questionnaire_id', 0)
+        questionnaire_exits = Questionnaire.objects.filter(
+            id=questionnaire_id, customer=request.user.customer)
+        if not questionnaire_exits:
+            return params_error({
+                'questionnaire_id': '该问卷不存在'
+            })
+        questionnaire = questionnaire_exits[0]
+        comments = [{
+            'id': item.id,
+            'datetime': datetime.strftime(item.datetime, '%Y-%m-%d'),
+            'comment': item.comment
+        } for item in questionnaire.questionnairecomment_set.all()]
+
+        return json_response(comments)
+
+
+class QuestionnaireStateResource(Resource):
+    @atomic
+    @customer_required
+    def put(self, request, *args, **kwargs):
+        data = request.PUT
+        questionnaire_id = data.get('questionnaire_id', 0)
+        questionnaire_exits = Questionnaire.objects.filter(
+            id=questionnaire_id, customer=request.user.customer, state=3)
+        if not questionnaire_exits:
+            return params_error({
+                'questionnaire_id': '问卷找不到,或者该问卷还未通过审核'
+            })
+        questionnaire = questionnaire_exits[0]
+        questionnaire.state = 4
+        questionnaire.save()
+        return json_response({
+            'state': "发布成功"
+        })

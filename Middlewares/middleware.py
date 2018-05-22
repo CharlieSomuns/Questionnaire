@@ -2,6 +2,7 @@ import json
 
 from django.http.multipartparser import MultiPartParser
 from django.middleware.common import MiddlewareMixin
+from Api.utils import params_error
 
 
 class DataConvert(MiddlewareMixin):
@@ -15,8 +16,13 @@ class DataConvert(MiddlewareMixin):
         method = request.method
         if 'application/json' in request.META['CONTENT_TYPE']:
             # 把客户端上传的json数据转化成python字典
-            data = json.loads(request.body.decode())
-            files = None
+            try:
+                data = json.loads(request.body.decode())
+                files = None
+            except Exception as e:
+                return params_error({
+                    'body': '请求数据类型不正确'
+                })
         elif 'multipart/form-data' in request.META['CONTENT_TYPE']:
             # 把客户端已formdata上传的数据进行解析,通常客户端会把上传的文件也放在formdata中,
             # 所以下面的解析会把上传的文件也解析出来
