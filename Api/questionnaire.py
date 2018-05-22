@@ -167,6 +167,9 @@ class QuestionResource(Resource):
             qitem.question = question
             qitem.content = item
             qitem.save()
+        questionnaire=question.questionnaire
+        questionnaire.state=0
+        questionnaire.save()
         return json_response()
 
     @atomic
@@ -191,6 +194,8 @@ class QuestionResource(Resource):
             qitem.question = question
             qitem.content = item
             qitem.save()
+        questionnaire.state=0
+        questionnaire.save()
         return json_response({
             'id': question.id
         })

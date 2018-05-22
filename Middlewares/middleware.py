@@ -10,12 +10,15 @@ class MethodConvertMiddleware(MiddlewareMixin):
         method = request.method.upper()
         if 'application/json' in request.META['CONTENT_TYPE']:
             data = json.loads(request.body.decode())
+            files = None
         elif 'multipart/form-data' in request.META['CONTENT_TYPE']:
             data, files = MultiPartParser(
                 request.META, request, request.upload_handlers).parse()
-            setattr(request, method.upper()+'_FILES', files)
         else:
-            data = {}
+            data = request.GET
+            files = None
+        if files:
+            setattr(request, method.upper()+'_FILES', files)
         setattr(request, method, data)
         if 'HTTP_X_METHOD' in request.META:
             setattr(request, 'method', method)
