@@ -1,12 +1,13 @@
 import random
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from django.shortcuts import render
 from django.http.response import HttpResponse
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
+from django.db.transaction import atomic
 
 from Question.models import *
 from Api.resources import Resource
@@ -214,18 +215,106 @@ class SessionResource(Resource):
 
 # 问卷资源
 class QuestionnaireResource(Resource):
-    
+
     @customer_required
     def get(self, request, *args, **kwargs):
         return json_response({})
 
+    @atomic
     @customer_required
     def put(self, request, *args, **kwargs):
-        return json_response({})
+        # 获取请求数据
+        data = request.PUT
+        # 创建问卷对象
+        questionnaire = Questionnaire()
+        # 属性赋值
+        questionnaire.customer = request.user.customer
+        questionnaire.title = data.get('title', '标题')
+        questionnaire.logo = data.get('logo', '')
+        # 特殊处理 创建时间使用当前时间
+        questionnaire.datetime = datetime.now()
+        # 特殊处理 截止时间
+        try:
+            # 获取截止时间字符串
+            deadline_str = data.get('deadline', "")
+            # 把时间字符串转化为时间对象
+            deadline = datetime.strptime(deadline_str, '%Y-%m-%d')
+        except Exception as e:
+            # 如果获取截止时间失败,那么使用当前时间加上10天
+            deadline = datetime.now()+timedelta(days=10)
 
+        questionnaire.deadline = deadline
+        questionnaire.catogory = data.get('catogory', '')
+        # 特殊处理 问卷创建时,状态为草稿
+        questionnaire.state = 0
+        # 特殊处理 默认问卷数量为1份
+        questionnaire.quantity = int(data.get('quantity', 1))
+        questionnaire.background = data.get('background', '')
+        questionnaire.save()
+
+        # 特殊处理 问卷的标签
+        # 获取需要添加到问卷中的标签id列表
+        mark_ids = data.get('mark_ids', [])
+        # 根据id列表找出标签
+        marks = Mark.objects.filter(id__in=mark_ids)
+        # 把找出来的标签添加进问卷中
+        questionnaire.marks.set(marks)
+        questionnaire.save()
+
+        return json_response({
+            "id": questionnaire.id
+        })
+
+    @atomic
     @customer_required
     def post(self, request, *args, **kwargs):
-        return json_response({})
+        data = request.POST
+        questionnaire_id = int(data.get('questionnaire_id', 0))
+        questionnaire = Questionnaire.objects.get(id=questionnaire_id)
+
+        state = int(data.get('state', 0))
+        errors = dict()
+        if questionnaire.customer != request.user.customer:
+            errors['questionnaire_id'] = "不可以更新当前问卷"
+        if questionnaire.state == 4:
+            errors['questionnaire_id'] = "当前问卷已经发布,不可以更新"
+        # 判断客户端上传的状态是否合法
+        if state in [2, 3, 4]:
+            errors['state'] = '只能保存或者提交问卷'
+        if errors:
+            return params_error(errors)
+        questionnaire.title = data.get('title', '标题')
+        questionnaire.logo = data.get('logo', '')
+        # 特殊处理 截止时间
+        try:
+            # 获取截止时间字符串
+            deadline_str = data.get('deadline', "")
+            # 把时间字符串转化为时间对象
+            deadline = datetime.strptime(deadline_str, '%Y-%m-%d')
+        except Exception as e:
+            # 如果获取截止时间失败,那么使用当前时间加上10天
+            deadline = datetime.now()+timedelta(days=10)
+        questionnaire.deadline = deadline
+
+        questionnaire.catogory = data.get('catogory', '')
+        # 特殊state
+        questionnaire.state = state
+
+        questionnaire.quantity = int(data.get('quantity', 1))
+        questionnaire.background = data.get('background', '')
+        questionnaire.save()
+        # 特殊处理 问卷的标签
+        # 获取需要添加到问卷中的标签id列表
+        mark_ids = data.get('mark_ids', [])
+        # 根据id列表找出标签
+        marks = Mark.objects.filter(id__in=mark_ids)
+        # 把找出来的标签添加进问卷中
+        questionnaire.marks.set(marks)
+        questionnaire.save()
+
+        return json_response({
+            "questionnaire": '更新成功'
+        })
 
     @customer_required
     def delete(self, request, *args, **kwargs):
