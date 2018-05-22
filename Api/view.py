@@ -9,6 +9,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.views.decorators.csrf import csrf_exempt
 from django.db.transaction import atomic
 from django.db.models import Q
+from django.utils import timezone
 
 from Question.models import *
 from Api.resources import Resource
@@ -566,3 +567,95 @@ class QuestionnaireStateResource(Resource):
         return json_response({
             'state': "发布成功"
         })
+
+
+class AnswerResource(Resource):
+    @atomic
+    @userinfo_required
+    def put(self, request, *args, **kwargs):
+        data = request.PUT
+        questionnaire_id = data.get('questionnaire_id', 0)
+        # 找出要参与的问卷
+        questionnaire_exits = Questionnaire.objects.filter(
+            id=questionnaire_id, state=4)
+        if not questionnaire_exits:
+            return params_error({
+                'questionnaire_id': '当前问卷不存在'
+            })
+
+        # 判断是否已经参与了该问卷
+        questionnaire = questionnaire_exits[0]
+        has_joined = Answer.objects.filter(
+            userinfo=request.user.userinfo, questionnaire=questionnaire)
+        if has_joined:
+            return params_error({
+                'questionnaire_id': '已经参与了该问卷调查'
+            })
+        # 判断参与问卷的人数是否已满
+        has_joined_count = Answer.objects.filter(
+            questionnaire=questionnaire).count()
+        if questionnaire.quantity <= has_joined_count:
+            return params_error({
+                'questionnaire_id': '该问卷参与人数已满'
+            })
+        # 判断问卷是否已经结束
+        #  datetime.now() 不带时区 而从数据库中读取出来的时间是带时区的所以不能直接比较
+        # 要使用django.utils timezone.now()
+        if questionnaire.deadline < timezone.now():
+            return params_error({
+                'questionnaire_id': '该问卷已结束'
+            })
+        # 创建参与信息
+        answer = Answer()
+        answer.userinfo = request.user.userinfo
+        answer.questionnaire = questionnaire
+        answer.datetime = datetime.now()
+        answer.is_done = False
+        answer.save()
+
+        return json_response({
+            'id': answer.id
+        })
+
+    @atomic
+    @userinfo_required
+    def delete(self, request, *args, **kwargs):
+        data = request.DELETE
+        ids = data.get('ids', [])
+        objs = Answer.objects.filter(
+            id__in=ids, userinfo=request.user.userinfo, is_done=False)
+        deleted_ids = [obj.id for obj in objs]
+        objs.delete()
+        return json_response({
+            'deleted_ids': deleted_ids
+        })
+
+    @userinfo_required
+    def get(self, request, *args, **kwargs):
+        data = request.GET
+        limit = abs(int(data.get('limit', 30)))
+        start_id = data.get('start_id', 0)
+        is_done = data.get('is_done', False)
+        objs = Answer.objects.filter(
+            id__gt=start_id, userinfo=request.user.userinfo, is_done=is_done)
+
+        data = []
+        for obj in objs:
+            answer_dict = dict()
+            answer_dict['id']=obj.id
+            answer_dict['datetime'] = datetime.strftime(
+                obj.datetime, '%Y-%m-%d')
+            answer_dict['is_done'] = obj.is_done
+            answer_dict['questionnaire']={
+                'id':obj.questionnaire.id,
+                'title':obj.questionnaire.title
+            }
+            data.append(answer_dict)
+        
+        return json_response(data)
+
+
+class AnswerItemResource(Resource):
+    pass
+
+
