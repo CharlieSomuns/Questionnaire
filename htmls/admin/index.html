@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="/static/bootstrap/css/bootstrap.css">
     <title>后台管理</title>
 </head>
 <style>
@@ -12,20 +13,19 @@
         text-align: center;
         font-size: 1.3em;
         padding: 10px;
+        margin-bottom: 20px;
     }
 
     .content {
-        padding: 10px 20px;
-        border: solid silver 1px;
         border-radius: 5px;
     }
 
     .content .list {
-        float: left;
-        width: 200px;
         border: solid silver 1px;
         text-align: center;
         padding: 10px;
+        min-height: 400px;
+        position: relative;
     }
 
     .content .list ul {
@@ -34,28 +34,50 @@
     }
 
     .content .list ul li {
+        cursor: pointer;
         margin-top: 8px;
         padding: 5px 10px;
         border: solid silver 1px;
         border-radius: 5px;
     }
 
+    .content .list ul li:hover {
+        background-color: azure;
+    }
+
+    #fresh-btn {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+    }
+
     .content .item-content {
-        margin-left: 20px;
-        float: left;
-        width: 600px;
         min-height: 400px;
     }
 
     .questionnaire-content {
         min-height: 500px;
         border: solid silver 1px;
+        padding: 10px;
     }
+    .q-title{
+        text-align: center;
+        padding: 10px;
+        font-size: 1.2em;
+        font-weight: bold;
+    }
+
 
     .comment textarea {
         margin-top: 20px;
-        width: 590px;
+        width: 100%;
     }
+
+    .comment textarea:focus {
+        outline: none;
+        border: solid cadetblue 1px;
+    }
+
 
     .buttons {
         text-align: right;
@@ -70,30 +92,77 @@
     <div class="header">
         欢迎管理员!
     </div>
-    <div class="content">
-        <div class="list">
-            <ul id="questionnaires">
-                <li class="item" onclick=""></li>
-            </ul>
-            <span>刷新</span>
+    <div class="container">
+
+        <div class="content row">
+            <div class="list col-md-3">
+                <ul id="questionnaires">
+                </ul>
+                <span class="btn btn-primary" id="fresh-btn" onclick="load_questionnaire()">刷新</span>
+            </div>
+            <div class="item-content col-md-9">
+                <div class="questionnaire-content" id="questionnaire-content">
+                    <div class="q-title">q_title</div>
+                    <div class="q-question">
+                        <div class="question">quetion_title</div>
+                        <div class="items">q_items</div>
+                    </div>
+
+
+                </div>
+                <div class="comment">
+                    <textarea name="" id="" cols="30" rows="10"></textarea>
+                </div>
+                <div class="buttons">
+                    <button>不同意</button>
+                    <button>同意</button>
+                </div>
+            </div>
         </div>
-        <div class="item-content">
-            <div class="questionnaire-content">
-                问卷内容
-            </div>
-            <div class="comment">
-                <textarea name="" id="" cols="30" rows="10"></textarea>
-            </div>
-            <div class="buttons">
-                <button>不同意</button>
-                <button>同意</button>
-            </div>
-        </div>
-        <div style="clear: both;"></div>
+    </div>
+    <div style="height: 300px;">
     </div>
 
 </body>
 <script>
+    function get_detail(id) {
+        let xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = function (event) {
+            let readystate = xhr.readyState
+            if (readystate == 4) {
+                if (xhr.status == 200) {
+                    let response = JSON.parse(xhr.responseText)
+                    let state = response.state
+                    let msg = response.msg
+                    let data = response.data
+                    let content = document.getElementById('questionnaire-content')
+                    content.innerHTML = ''
+                    let item = data[0]
+                    let customer =
+                        `
+                    `
+
+                } else {
+                    alert('服务器连接失败!')
+                }
+            }
+        }
+        xhr.open('get', '/api/v1/questionnaire?state=4&limit=1&with_detail=true&start_id=' + id)
+        xhr.send()
+    }
+    function check_login() {
+        let xhr = new XMLHttpRequest()
+        xhr.open('get', '/api/v1/session', false)
+        xhr.send()
+        let response = JSON.parse(xhr.responseText)
+        let state = response.state
+        let msg = response.msg
+        if (state == 200) {
+            return true
+        }
+        return false
+
+    }
     function load_questionnaire() {
         let xhr = new XMLHttpRequest()
         xhr.onreadystatechange = function (event) {
@@ -105,9 +174,13 @@
                     let msg = response.msg
                     let data = response.data
                     let ul = document.getElementById('questionnaires')
-                    for (let questionnaire of data) {
+                    ul.innerHTML = ''
+                    for (let item of data) {
                         let li = document.createElement('li')
-                        li.innerHTML = questionnaire.title
+                        li.innerHTML = item.title
+                        li.onclick = function () {
+                            get_detail(item.id)
+                        }
                         ul.appendChild(li)
                     }
                 } else {
@@ -115,12 +188,18 @@
                 }
             }
         }
-        xhr.open('get', '/api/v1/questionnaire')
+        xhr.open('get', '/api/v1/questionnaire?state=4')
         xhr.send()
 
     }
     function onload() {
-        load_questionnaire()
+        let login = check_login()
+        if (login) {
+            load_questionnaire()
+
+        } else {
+            window.location = '/admin/login.html'
+        }
     }
 </script>
 

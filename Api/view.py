@@ -1,5 +1,6 @@
 import random
 import json
+import math
 from datetime import datetime, timedelta
 
 from django.shortcuts import render
@@ -14,7 +15,7 @@ from django.utils import timezone
 from Question.models import *
 from Api.resources import Resource
 from Api.utils import *
-from Api.decorators import *
+from Api.decorators import userinfo_required, customer_required, superuser_required
 
 
 # 获取注册码
@@ -190,7 +191,7 @@ class SessionResource(Resource):
             return json_response({
                 'msg': '已经登录'
             })
-        return json_response({
+        return not_authenticated({
             'msg': '还未登录'
         })
 
@@ -759,4 +760,73 @@ class AnswerItemResource(Resource):
 
         return json_response(data)
 
+
+class InfoQuestionnaireResource(Resource):
+    def get(self, request, *args, **kwargs):
+        data = request.GET
+        with_detail=data.get('with_detail',False)
+        state = data.get('state', 3)
+        limit = int(data.get('limit', 15))
+        page = data.get('page', 1)
+        all_objs = Questionnaire.objects.filter(state=state)
+        count = all_objs.count()
+        pages = math.ceil(count/limit)
+        if page >= pages:
+            page = pages
+        if page<=1:
+           page=1 
+        start = (page-1)*limit
+        end = page*limit
+        objs = all_objs[start:end]
+        data = []
+        for obj in objs:
+            # 构建单个问卷信息
+            obj_dict = dict()
+            obj_dict['id'] = obj.id
+            obj_dict['title'] = obj.title
+            obj_dict['logo'] = obj.logo
+            obj_dict['datetime'] = datetime.strftime(obj.datetime, "%Y-%m-%d")
+            obj_dict['deadline'] = datetime.strftime(obj.deadline, "%Y-%m-%d")
+            obj_dict['catogory'] = obj.catogory
+            obj_dict['state'] = obj.state
+            obj_dict['quantity'] = obj.quantity
+            obj_dict['background'] = obj.background
+            # 读取全部标签
+            obj_dict['marks'] = [{'id': mark.id, 'name': mark.name,
+                                  'description': mark.description}for mark in obj.marks.all()]
+            if with_detail:
+                # 找出客户信息
+                obj_dict['customer']={
+                    'name':obj.customer.name,
+                    'email':obj.customer.email,
+                    'company':obj.customer.company,
+                    'address':obj.customer.address,
+                    'phone':obj.customer.phone,
+                    'mobile':obj.customer.mobile,
+                    'qq':obj.customer.qq,
+                    'wechat':obj.customer.wechat,
+                    'web':obj.customer.web,
+                    'industry':obj.customer.industry,
+                    'description':obj.customer.description,
+                }
+                # 构建问卷下的问题
+                obj_dict['questions'] = []
+                for question in obj.question_set.all():
+                    # 构建单个问题
+                    question_dict = dict()
+                    question_dict['id'] = question.id
+                    question_dict['title'] = question.title
+                    question_dict['is_checkbox'] = question.is_checkbox
+                    # 构建问题选项
+                    question_dict['items'] = [{
+                        "id": item.id,
+                        "content": item.content
+                    } for item in question.questionitem_set.all()]
+                    # 将问题添加到问卷的问题列表中
+                    obj_dict['questions'].append(question_dict)
+                
+            # 将问卷添加到问卷列表中
+            data.append(obj_dict)
+
+        return json_response(data)
 
