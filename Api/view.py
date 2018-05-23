@@ -642,20 +642,119 @@ class AnswerResource(Resource):
         data = []
         for obj in objs:
             answer_dict = dict()
-            answer_dict['id']=obj.id
+            answer_dict['id'] = obj.id
             answer_dict['datetime'] = datetime.strftime(
                 obj.datetime, '%Y-%m-%d')
             answer_dict['is_done'] = obj.is_done
-            answer_dict['questionnaire']={
-                'id':obj.questionnaire.id,
-                'title':obj.questionnaire.title
+            answer_dict['questionnaire'] = {
+                'id': obj.questionnaire.id,
+                'title': obj.questionnaire.title
             }
             data.append(answer_dict)
-        
+
         return json_response(data)
 
 
 class AnswerItemResource(Resource):
-    pass
 
+    def _save_answers(self, data, request):
+         # 判断问卷是否存在
+        questionnaire_id = data.get('questionnaire_id', 0)
+        questionnaire_exist = Questionnaire.objects.filter(
+            id=questionnaire_id, state=4, deadline__gt=timezone.now())
+        if not questionnaire_exist:
+            return params_error({
+                "questionnaire_id": "问卷不存在,或者不可提交答案"
+            })
+        # 验证问卷是否可以提交答案
+        questionnaire = questionnaire_exist[0]
+        has_joined = Answer.objects.filter(
+            questionnaire=questionnaire, userinfo=request.user.userinfo, is_done=False)
+        if not has_joined:
+            return params_error({
+                'questionnaire_id': "还没有参与该问卷,或者该问卷已经完成"
+            })
 
+        questions = data.get('questions', [])
+
+        # 可以提交答案的问题
+        question_ids = [item['question_id'] for item in questions]
+        questions_can_answer = Question.objects.filter(
+            id__in=question_ids, questionnaire=questionnaire)
+        questions_can_answer_ids = [obj.id for obj in questions_can_answer]
+        # 如果有回答过该问题,那么清空该问题答案
+        AnswerItem.objects.filter(
+            question__in=questions_can_answer, userinfo=request.user.userinfo).delete()
+
+        # data=[
+        #   {
+        #       "question_id":id,
+        #       "items":[1,2,3]
+        #   }
+        # ]
+
+        # 将用户的选项保存下来
+        for question in questions:
+            # 判断提交的问题是否合法
+            if question['question_id'] in questions_can_answer_ids:
+                question_obj = Question.objects.get(id=question['question_id'])
+                answer = AnswerItem()
+                answer.question = question_obj
+                answer.userinfo = request.user.userinfo
+                # 把该问题下选项找出来
+                items = QuestionItem.objects.filter(
+                    id__in=question['items'], question=question_obj)
+                if items.count() > 1 and question_obj.is_checkbox:
+                    answer.save()
+                    answer.items.set(items)
+                elif items.count() == 1:
+                    answer.save()
+                    answer.items.set(items)
+                else:
+                    return json_response({
+                        "warnning": '参数错误'
+                    })
+
+        # 用户保存,或者提交答案
+        answer = has_joined[0]
+        is_done = data.get('is_done', False)
+        answer.is_done = is_done
+        answer.save()
+
+        return json_response({'answer': "提交成功"})
+
+    @atomic
+    @userinfo_required
+    def put(self, request, *args, **kwargs):
+        data = request.PUT
+        response = self._save_answers(data, request)
+        return response
+
+    @atomic
+    @userinfo_required
+    def post(self, request, *args, **kwargs):
+        data = request.POST
+        response = self._save_answers(data, request)
+        return response
+
+    @userinfo_required
+    def get(self, request, *args, **kwargs):
+        data = request.GET
+        questionnaire_id = data.get('questionnaire_id', 0)
+        has_joined = Answer.objects.filter(
+            userinfo=request.user.userinfo, questionnaire__id=questionnaire_id)
+        if not has_joined:
+            return params_error({
+                'questionnaire_id': "没有相关信息"
+            })
+        questionnaire = Questionnaire.objects.get(id=questionnaire_id)
+        answers = AnswerItem.objects.filter(
+            userinfo=request.user.userinfo, question__questionnaire=questionnaire)
+        data = [
+            {
+                "question_id": answer.question.id,
+                "items": [{'id': item.id} for item in answer.items.all()]
+            } for answer in answers
+        ]
+
+        return json_response(data)
