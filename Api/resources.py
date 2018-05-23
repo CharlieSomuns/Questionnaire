@@ -66,7 +66,7 @@ class Register(object):
         urlpatterns = []
         for resource in self.resources:
             urlpatterns.append(
-                url(r'{version}/{name}'.format(version=self.version,
+                url(r'^{version}/{name}$'.format(version=self.version,
                                                name=resource.name), csrf_exempt(resource.enter))
             )
         return urlpatterns
