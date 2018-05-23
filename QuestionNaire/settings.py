@@ -25,7 +25,7 @@ SECRET_KEY = 'r-0+r9*+-_p=04&7m69qn@$a+_prh4@swg83j#487cvl)%8!@d'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -48,7 +48,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'Middlewares.middleware.MethodConvertMiddleware'
+    'Middlewares.middleware.DataConvert'
 ]
 
 ROOT_URLCONF = 'QuestionNaire.urls'
@@ -78,7 +78,7 @@ WSGI_APPLICATION = 'QuestionNaire.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'questionnaire_dev',
+        'NAME': 'questionnaire',
         'USER': 'django',
         'PASSWORD': 'djangopwd',
         'HOST': 'localhost',
