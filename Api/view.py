@@ -764,17 +764,18 @@ class AnswerItemResource(Resource):
 class InfoQuestionnaireResource(Resource):
     def get(self, request, *args, **kwargs):
         data = request.GET
-        with_detail=data.get('with_detail',False)
+        start_id = int(data.get('start_id', 0))
+        with_detail = data.get('with_detail', False)
         state = data.get('state', 3)
-        limit = int(data.get('limit', 15))
+        limit = int(data.get('limit', 10))
         page = data.get('page', 1)
-        all_objs = Questionnaire.objects.filter(state=state)
+        all_objs = Questionnaire.objects.filter(state=state, id__gt=start_id)
         count = all_objs.count()
         pages = math.ceil(count/limit)
         if page >= pages:
             page = pages
-        if page<=1:
-           page=1 
+        if page <= 1:
+            page = 1
         start = (page-1)*limit
         end = page*limit
         objs = all_objs[start:end]
@@ -796,18 +797,18 @@ class InfoQuestionnaireResource(Resource):
                                   'description': mark.description}for mark in obj.marks.all()]
             if with_detail:
                 # 找出客户信息
-                obj_dict['customer']={
-                    'name':obj.customer.name,
-                    'email':obj.customer.email,
-                    'company':obj.customer.company,
-                    'address':obj.customer.address,
-                    'phone':obj.customer.phone,
-                    'mobile':obj.customer.mobile,
-                    'qq':obj.customer.qq,
-                    'wechat':obj.customer.wechat,
-                    'web':obj.customer.web,
-                    'industry':obj.customer.industry,
-                    'description':obj.customer.description,
+                obj_dict['customer'] = {
+                    'name': obj.customer.name,
+                    'email': obj.customer.email,
+                    'company': obj.customer.company,
+                    'address': obj.customer.address,
+                    'phone': obj.customer.phone,
+                    'mobile': obj.customer.mobile,
+                    'qq': obj.customer.qq,
+                    'wechat': obj.customer.wechat,
+                    'web': obj.customer.web,
+                    'industry': obj.customer.industry,
+                    'description': obj.customer.description,
                 }
                 # 构建问卷下的问题
                 obj_dict['questions'] = []
@@ -824,9 +825,8 @@ class InfoQuestionnaireResource(Resource):
                     } for item in question.questionitem_set.all()]
                     # 将问题添加到问卷的问题列表中
                     obj_dict['questions'].append(question_dict)
-                
+
             # 将问卷添加到问卷列表中
             data.append(obj_dict)
 
         return json_response(data)
-

@@ -23,7 +23,7 @@
     .content .list {
         border: solid silver 1px;
         text-align: center;
-        padding: 10px;
+        padding: 10px 10px 40px 10px;
         min-height: 400px;
         position: relative;
     }
@@ -60,13 +60,19 @@
         border: solid silver 1px;
         padding: 10px;
     }
-    .q-title{
+
+    .q-title {
         text-align: center;
         padding: 10px;
         font-size: 1.2em;
         font-weight: bold;
     }
 
+    .question,
+    .items {
+        font-size: 1.1em;
+        padding: 10px;
+    }
 
     .comment textarea {
         margin-top: 20px;
@@ -102,20 +108,14 @@
             </div>
             <div class="item-content col-md-9">
                 <div class="questionnaire-content" id="questionnaire-content">
-                    <div class="q-title">q_title</div>
-                    <div class="q-question">
-                        <div class="question">quetion_title</div>
-                        <div class="items">q_items</div>
-                    </div>
-
-
+                    点击问卷查看
                 </div>
                 <div class="comment">
-                    <textarea name="" id="" cols="30" rows="10"></textarea>
+                    <textarea name="comment" id="comment" cols="30" rows="10"></textarea>
                 </div>
                 <div class="buttons">
-                    <button>不同意</button>
-                    <button>同意</button>
+                    <button onclick="comment(false)">不同意</button>
+                    <button onclick="comment(true)">同意</button>
                 </div>
             </div>
         </div>
@@ -125,6 +125,7 @@
 
 </body>
 <script>
+    let questionnaire_id = 0
     function get_detail(id) {
         let xhr = new XMLHttpRequest()
         xhr.onreadystatechange = function (event) {
@@ -138,16 +139,41 @@
                     let content = document.getElementById('questionnaire-content')
                     content.innerHTML = ''
                     let item = data[0]
-                    let customer =
-                        `
+
+
+                    let customer = `
+                    <div class="q-title">${item.title}</div>
+                    <div class="q-question">
+                       questions
+                    </div>
                     `
+                    customer.replace('q_title', item.title)
+                    let questions_str = ''
+                    for (let question of item.questions) {
+                        let checkbox = '单选'
+                        if (question.is_checkbox) {
+                            checkbox = '多选'
+                        }
+                        let quetion_str = `
+                        <div class="question">${checkbox}&nbsp;&nbsp;&nbsp;&nbsp;${question.title}</div>
+                        <div class="items row">
+                            q_items
+                        </div>
+                        `
+                        let item_str = ''
+                        for (let item of question.items) {
+                            item_str += '<div class="col-md-3 col-md-4">item_name</div>'.replace('item_name', item.content)
+                        }
+                        questions_str += quetion_str.replace('q_items', item_str)
+                    }
+                    content.innerHTML = customer.replace('questions', questions_str)
 
                 } else {
                     alert('服务器连接失败!')
                 }
             }
         }
-        xhr.open('get', '/api/v1/questionnaire?state=4&limit=1&with_detail=true&start_id=' + id)
+        xhr.open('get', '/api/v1/questionnaire?state=1&limit=1&with_detail=true&start_id=' + (id - 1))
         xhr.send()
     }
     function check_login() {
@@ -163,6 +189,51 @@
         return false
 
     }
+    function comment(flag) {
+        let xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = function (event) {
+            let readystate = xhr.readyState
+            if (readystate == 4) {
+                if (xhr.status == 200) {
+                    let response = JSON.parse(xhr.responseText)
+                    let state = response.state
+                    let msg = response.msg
+                    let data = response.data
+                    if (state == 200) {
+                        alert('提交成功')
+                        let content = document.getElementById('questionnaire-content')
+                        content.innerHTML = ''
+                        questionnaire_id=0
+                        load_questionnaire()
+                    }
+                    else {
+                        let error_str=''
+                        for(let att in data){
+                            error_str+=data[att]
+                        }
+                        alert(error_str)
+                    }
+                }
+            }
+        }
+        xhr.open('post', '/api/v1/questionnaire_comment')
+        xhr.setRequestHeader('X-method', 'put')
+        xhr.setRequestHeader('Content-Type', 'application/json')
+
+        let comment_str = document.getElementById('comment').value
+        if (!flag && !comment_str) {
+            alert('需要提供审核信息')
+            return
+        }
+        let req_data = {
+            'is_agree': flag,
+            'comment': comment_str,
+            'questionnaire_id': questionnaire_id
+        }
+        xhr.send(JSON.stringify(req_data))
+
+    }
+
     function load_questionnaire() {
         let xhr = new XMLHttpRequest()
         xhr.onreadystatechange = function (event) {
@@ -180,6 +251,7 @@
                         li.innerHTML = item.title
                         li.onclick = function () {
                             get_detail(item.id)
+                            questionnaire_id = item.id
                         }
                         ul.appendChild(li)
                     }
@@ -188,7 +260,7 @@
                 }
             }
         }
-        xhr.open('get', '/api/v1/questionnaire?state=4')
+        xhr.open('get', '/api/v1/questionnaire?state=1')
         xhr.send()
 
     }
