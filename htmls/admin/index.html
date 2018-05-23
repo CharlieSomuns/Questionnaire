@@ -1,14 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>后台管理</title>
 </head>
-<body>
-    
-    
+<style>
+    .header {
+        text-align: center;
+        font-size: 1.3em;
+        padding: 10px;
+    }
+
+    .content {
+        padding: 10px 20px;
+        border: solid silver 1px;
+        border-radius: 5px;
+    }
+
+    .content .list {
+        float: left;
+        width: 200px;
+        border: solid silver 1px;
+        text-align: center;
+        padding: 10px;
+    }
+
+    .content .list ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .content .list ul li {
+        margin-top: 8px;
+        padding: 5px 10px;
+        border: solid silver 1px;
+        border-radius: 5px;
+    }
+
+    .content .item-content {
+        margin-left: 20px;
+        float: left;
+        width: 600px;
+        min-height: 400px;
+    }
+
+    .questionnaire-content {
+        min-height: 500px;
+        border: solid silver 1px;
+    }
+
+    .comment textarea {
+        margin-top: 20px;
+        width: 590px;
+    }
+
+    .buttons {
+        text-align: right;
+    }
+
+    button {
+        padding: 5px 10px;
+    }
+</style>
+
+<body onload="onload()">
+    <div class="header">
+        欢迎管理员!
+    </div>
+    <div class="content">
+        <div class="list">
+            <ul id="questionnaires">
+                <li class="item" onclick=""></li>
+            </ul>
+            <span>刷新</span>
+        </div>
+        <div class="item-content">
+            <div class="questionnaire-content">
+                问卷内容
+            </div>
+            <div class="comment">
+                <textarea name="" id="" cols="30" rows="10"></textarea>
+            </div>
+            <div class="buttons">
+                <button>不同意</button>
+                <button>同意</button>
+            </div>
+        </div>
+        <div style="clear: both;"></div>
+    </div>
+
 </body>
+<script>
+    function load_questionnaire() {
+        let xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = function (event) {
+            let readystate = xhr.readyState
+            if (readystate == 4) {
+                if (xhr.status == 200) {
+                    let response = JSON.parse(xhr.responseText)
+                    let state = response.state
+                    let msg = response.msg
+                    let data = response.data
+                    let ul = document.getElementById('questionnaires')
+                    for (let questionnaire of data) {
+                        let li = document.createElement('li')
+                        li.innerHTML = questionnaire.title
+                        ul.appendChild(li)
+                    }
+                } else {
+                    alert('服务器连接失败!')
+                }
+            }
+        }
+        xhr.open('get', '/api/v1/questionnaire')
+        xhr.send()
+
+    }
+    function onload() {
+        load_questionnaire()
+    }
+</script>
 
 </html>
