@@ -204,7 +204,7 @@ class SessionResource(Resource):
             return json_response({
                 'msg': '登录成功'
             })
-        return json_response({
+        return params_error({
             'msg': '用户名或密码错误'
         })
 

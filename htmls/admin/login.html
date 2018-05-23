@@ -9,11 +9,7 @@
 </head>
 
 <body>
-
     <form>
-        <div class="errors">
-            用户名或密码错误
-        </div>
         <div>
             <label for="">用户名</label>
             <input type="text" name="username" id="username">
@@ -22,9 +18,38 @@
             <label for="">密码</label>
             <input type="password" name="username" id="password">
         </div>
-        <button type="button">登录</button>
+        <button type="button" onclick="login()">登录</button>
     </form>
 
 </body>
+<script>
+    function login() {
+        let xhr = new XMLHttpRequest()
+        xhr.onreadystatechange = function (event) {
+            let readystate = xhr.readyState
+            if (readystate == 4 && xhr.status == 200) {
+                let response = JSON.parse(xhr.responseText)
+                let state = response.state
+                let msg = response.msg
+                let data = response.data
+                if(state==200){
+                    window.location="/admin/index.html"
+                }else{
+                    alert('用户名或密码错误')
+                }
+            }
+        }
+        xhr.open('post','/api/v1/session')
+        let req_data={
+            'username':document.getElementById('username').value,
+            'password':document.getElementById('password').value
+        }
+        xhr.setRequestHeader('Content-Type','application/json')
+        xhr.setRequestHeader('X-method','put')
+        xhr.send(JSON.stringify(req_data))
+    }
+
+</script>
+
 
 </html>
