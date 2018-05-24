@@ -321,6 +321,7 @@ class QuestionnaireResource(Resource):
         questionnaire.state = 0
         # 特殊处理 默认问卷数量为1份
         questionnaire.quantity = int(data.get('quantity', 1))
+        questionnaire.free_count = int(data.get('quantity', 1))
         questionnaire.background = data.get('background', '')
         questionnaire.save()
 
@@ -372,6 +373,7 @@ class QuestionnaireResource(Resource):
         questionnaire.state = state
 
         questionnaire.quantity = int(data.get('quantity', 1))
+        questionnaire.free_count = int(data.get('quantity', 1))
         questionnaire.background = data.get('background', '')
         questionnaire.save()
         # 特殊处理 问卷的标签
@@ -613,6 +615,9 @@ class AnswerResource(Resource):
         answer.datetime = datetime.now()
         answer.is_done = False
         answer.save()
+        # 更新可用问卷数量
+        questionnaire.count = questionnaire.count-1
+        questionnaire.save()
 
         return json_response({
             'id': answer.id
@@ -626,6 +631,11 @@ class AnswerResource(Resource):
         objs = Answer.objects.filter(
             id__in=ids, userinfo=request.user.userinfo, is_done=False)
         deleted_ids = [obj.id for obj in objs]
+        # 更新问卷可用数量
+        for obj in objs:
+            questionnaire = obj.questionnaire
+            questionnaire.count = questionnaire.count+1
+            questionnaire.save()
         objs.delete()
         return json_response({
             'deleted_ids': deleted_ids
@@ -760,25 +770,35 @@ class AnswerItemResource(Resource):
 
         return json_response(data)
 
-
-class InfoQuestionnaireResource(Resource):
+# 审核管理员
+class CommentQuestionnaire(Resource):
+    @superuser_required
     def get(self, request, *args, **kwargs):
         data = request.GET
-        start_id = int(data.get('start_id', 0))
+        # 是否需要把详细信息返回去
         with_detail = data.get('with_detail', False)
-        state = data.get('state', 3)
-        limit = int(data.get('limit', 10))
-        page = data.get('page', 1)
-        all_objs = Questionnaire.objects.filter(state=state, id__gt=start_id)
+        # 每页显示的数量
+        limit = abs(int(data.get('limit', 10)))
+        # 其实id
+        start_id = abs(int(data.get('start_id', 0)))
+        # 访问第几页
+        page = abs(int(data.get('page', 1)))
+        # 搜索所有待复核的问卷
+        all_objs = Questionnaire.objects.filter(state=1, id__gt=start_id)
+        # 获取所有待复核问卷数量
         count = all_objs.count()
+        # 计算出总页数
         pages = math.ceil(count/limit)
+        # 判断需要访问的页号
         if page >= pages:
             page = pages
-        if page <= 1:
+        if page == 0:
             page = 1
+        # 取出对应的页面
         start = (page-1)*limit
         end = page*limit
         objs = all_objs[start:end]
+        # 构建返回数据
         data = []
         for obj in objs:
             # 构建单个问卷信息
@@ -795,21 +815,8 @@ class InfoQuestionnaireResource(Resource):
             # 读取全部标签
             obj_dict['marks'] = [{'id': mark.id, 'name': mark.name,
                                   'description': mark.description}for mark in obj.marks.all()]
+            # 是否构建详细信息
             if with_detail:
-                # 找出客户信息
-                obj_dict['customer'] = {
-                    'name': obj.customer.name,
-                    'email': obj.customer.email,
-                    'company': obj.customer.company,
-                    'address': obj.customer.address,
-                    'phone': obj.customer.phone,
-                    'mobile': obj.customer.mobile,
-                    'qq': obj.customer.qq,
-                    'wechat': obj.customer.wechat,
-                    'web': obj.customer.web,
-                    'industry': obj.customer.industry,
-                    'description': obj.customer.description,
-                }
                 # 构建问卷下的问题
                 obj_dict['questions'] = []
                 for question in obj.question_set.all():
@@ -825,8 +832,228 @@ class InfoQuestionnaireResource(Resource):
                     } for item in question.questionitem_set.all()]
                     # 将问题添加到问卷的问题列表中
                     obj_dict['questions'].append(question_dict)
-
             # 将问卷添加到问卷列表中
             data.append(obj_dict)
 
         return json_response(data)
+
+
+class HomeQuestionnaireResource(Resource):
+    @userinfo_required
+    def get(self, request, *args, **kwargs):
+        data = request.GET
+        # 是否需要把详细信息返回去
+        with_detail = data.get('with_detail', False)
+        # 每页显示的数量
+        limit = abs(int(data.get('limit', 10)))
+        # 其实id
+        start_id = abs(int(data.get('start_id', 0)))
+        # 访问第几页
+        page = abs(int(data.get('page', 1)))
+
+        has_joined = Answer.objects.filter(userinfo=request.user.userinfo)
+        has_joined_questionnaire_ids = [item.id for item in has_joined]
+        # 搜索所有可参与的问卷
+        all_objs = Questionnaire.objects.filter(
+            id__gt=start_id, state=4, deadline__gt=timezone.now(), free_count__gt=0).exclude(id__in=has_joined_questionnaire_ids)
+        # 获取所有可参与问卷数量
+        count = all_objs.count()
+        # 计算出总页数
+        pages = math.ceil(count/limit)
+        # 判断需要访问的页号
+        if page >= pages:
+            page = pages
+        if page == 0:
+            page = 1
+        # 取出对应的页面
+        start = (page-1)*limit
+        end = page*limit
+        objs = all_objs[start:end]
+        # 构建响应数据
+        data = []
+        for obj in objs:
+            # 构建单个问卷信息
+            obj_dict = dict()
+            obj_dict['id'] = obj.id
+            obj_dict['title'] = obj.title
+            obj_dict['logo'] = obj.logo
+            obj_dict['datetime'] = datetime.strftime(obj.datetime, "%Y-%m-%d")
+            obj_dict['deadline'] = datetime.strftime(obj.deadline, "%Y-%m-%d")
+            obj_dict['catogory'] = obj.catogory
+            obj_dict['state'] = obj.state
+            obj_dict['quantity'] = obj.quantity
+            obj_dict['background'] = obj.background
+            obj_dict['customer'] = obj.customer.company
+            # 读取全部标签
+            obj_dict['marks'] = [{'id': mark.id, 'name': mark.name,
+                                  'description': mark.description}for mark in obj.marks.all()]
+            # 是否构建详细信息
+            if with_detail:
+                # 构建问卷下的问题
+                obj_dict['questions'] = []
+                for question in obj.question_set.all():
+                    # 构建单个问题
+                    question_dict = dict()
+                    question_dict['id'] = question.id
+                    question_dict['title'] = question.title
+                    question_dict['is_checkbox'] = question.is_checkbox
+                    # 构建问题选项
+                    question_dict['items'] = [{
+                        "id": item.id,
+                        "content": item.content
+                    } for item in question.questionitem_set.all()]
+                    # 将问题添加到问卷的问题列表中
+                    obj_dict['questions'].append(question_dict)
+            # 将问卷添加到问卷列表中
+            data.append(obj_dict)
+
+        return json_response(data)
+
+
+class UserQuestionnaireResource(Resource):
+    @userinfo_required
+    def get(self, request, *args, **kwargs):
+        data = request.GET
+        # 是否需要把详细信息返回去
+        with_detail = data.get('with_detail', False)
+        # 每页显示的数量
+        limit = abs(int(data.get('limit', 10)))
+        # 其实id
+        start_id = abs(int(data.get('start_id', 0)))
+        # 访问第几页
+        page = abs(int(data.get('page', 1)))
+
+        # 是否已完成
+        is_done = data.get('is_done', False)
+        if is_done=='true':
+            is_done=True
+        else:
+            is_done=False
+
+        # 搜索所有可参与的问卷
+        all_objs = Answer.objects.filter(
+            userinfo=request.user.userinfo, is_done=is_done)
+        # 获取所有可参与问卷数量
+        count = all_objs.count()
+        # 计算出总页数
+        pages = math.ceil(count/limit)
+        # 判断需要访问的页号
+        if page >= pages:
+            page = pages
+        if page == 0:
+            page = 1
+        # 取出对应的页面
+        start = (page-1)*limit
+        end = page*limit
+        objs = all_objs[start:end]
+        # 构建响应数据
+        questionnaires = [obj.questionnaire for obj in objs]
+        data = []
+        for obj in questionnaires:
+            # 构建单个问卷信息
+            obj_dict = dict()
+            obj_dict['id'] = obj.id
+            obj_dict['title'] = obj.title
+            obj_dict['logo'] = obj.logo
+            obj_dict['datetime'] = datetime.strftime(obj.datetime, "%Y-%m-%d")
+            obj_dict['deadline'] = datetime.strftime(obj.deadline, "%Y-%m-%d")
+            obj_dict['catogory'] = obj.catogory
+            obj_dict['state'] = obj.state
+            obj_dict['quantity'] = obj.quantity
+            obj_dict['background'] = obj.background
+            obj_dict['customer'] = obj.customer.company
+            # 读取全部标签
+            obj_dict['marks'] = [{'id': mark.id, 'name': mark.name,
+                                  'description': mark.description}for mark in obj.marks.all()]
+            # 是否构建详细信息
+            if with_detail:
+                # 构建问卷下的问题
+                obj_dict['questions'] = []
+                for question in obj.question_set.all():
+                    # 构建单个问题
+                    question_dict = dict()
+                    question_dict['id'] = question.id
+                    question_dict['title'] = question.title
+                    question_dict['is_checkbox'] = question.is_checkbox
+                    # 构建问题选项
+                    question_dict['items'] = [{
+                        "id": item.id,
+                        "content": item.content
+                    } for item in question.questionitem_set.all()]
+                    # 将问题添加到问卷的问题列表中
+                    obj_dict['questions'].append(question_dict)
+            # 将问卷添加到问卷列表中
+            data.append(obj_dict)
+
+        return json_response(data)
+
+
+# class InfoQuestionnaireResource(Resource):
+#     def get(self, request, *args, **kwargs):
+#         data = request.GET
+#         start_id = int(data.get('start_id', 0))
+#         with_detail = data.get('with_detail', False)
+#         state = data.get('state', 3)
+#         limit = int(data.get('limit', 10))
+#         page = data.get('page', 1)
+#         all_objs = Questionnaire.objects.filter(state=state, id__gt=start_id)
+#         count = all_objs.count()
+#         pages = math.ceil(count/limit)
+#         if page >= pages:
+#             page = pages
+#         if page <= 1:
+#             page = 1
+#         start = (page-1)*limit
+#         end = page*limit
+#         objs = all_objs[start:end]
+#         data = []
+#         for obj in objs:
+#             # 构建单个问卷信息
+#             obj_dict = dict()
+#             obj_dict['id'] = obj.id
+#             obj_dict['title'] = obj.title
+#             obj_dict['logo'] = obj.logo
+#             obj_dict['datetime'] = datetime.strftime(obj.datetime, "%Y-%m-%d")
+#             obj_dict['deadline'] = datetime.strftime(obj.deadline, "%Y-%m-%d")
+#             obj_dict['catogory'] = obj.catogory
+#             obj_dict['state'] = obj.state
+#             obj_dict['quantity'] = obj.quantity
+#             obj_dict['background'] = obj.background
+#             # 读取全部标签
+#             obj_dict['marks'] = [{'id': mark.id, 'name': mark.name,
+#                                   'description': mark.description}for mark in obj.marks.all()]
+#             if with_detail:
+#                 # 找出客户信息
+#                 obj_dict['customer'] = {
+#                     'name': obj.customer.name,
+#                     'email': obj.customer.email,
+#                     'company': obj.customer.company,
+#                     'address': obj.customer.address,
+#                     'phone': obj.customer.phone,
+#                     'mobile': obj.customer.mobile,
+#                     'qq': obj.customer.qq,
+#                     'wechat': obj.customer.wechat,
+#                     'web': obj.customer.web,
+#                     'industry': obj.customer.industry,
+#                     'description': obj.customer.description,
+#                 }
+#                 # 构建问卷下的问题
+#                 obj_dict['questions'] = []
+#                 for question in obj.question_set.all():
+#                     # 构建单个问题
+#                     question_dict = dict()
+#                     question_dict['id'] = question.id
+#                     question_dict['title'] = question.title
+#                     question_dict['is_checkbox'] = question.is_checkbox
+#                     # 构建问题选项
+#                     question_dict['items'] = [{
+#                         "id": item.id,
+#                         "content": item.content
+#                     } for item in question.questionitem_set.all()]
+#                     # 将问题添加到问卷的问题列表中
+#                     obj_dict['questions'].append(question_dict)
+
+#             # 将问卷添加到问卷列表中
+#             data.append(obj_dict)
+
+#         return json_response(data)

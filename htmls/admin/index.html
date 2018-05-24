@@ -110,6 +110,7 @@
                 <div class="questionnaire-content" id="questionnaire-content">
                     点击问卷查看
                 </div>
+                
                 <div class="comment">
                     <textarea name="comment" id="comment" cols="30" rows="10"></textarea>
                 </div>
@@ -148,6 +149,7 @@
                     </div>
                     `
                     customer.replace('q_title', item.title)
+
                     let questions_str = ''
                     for (let question of item.questions) {
                         let checkbox = '单选'
@@ -166,6 +168,7 @@
                         }
                         questions_str += quetion_str.replace('q_items', item_str)
                     }
+
                     content.innerHTML = customer.replace('questions', questions_str)
 
                 } else {

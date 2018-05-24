@@ -16,18 +16,33 @@
         padding: 10px;
         margin-bottom: 20px;
     }
+    .question{
+        border: solid silver 1px;
+        padding: 20px;
+    }
 </style>
 
 <body>
-    <div class="header">
-        问卷管理中心
+    <div class="header" id="header">
+
     </div>
     <div class="container">
-        <span>草稿</span>
-        <span>待复核</span>
-        <span>复合失败</span>
-        <span>复合通过</span>
-        <span>已发布</span>
+        <div class="row" id="questions">
+            <div class="question">
+                <div class="title">
+                    <label for="title">题纲</label>
+                    <input type="text" name="title" id="title">
+                </div>
+                <div>
+                    <label for="is_checkbox">多选</label>
+                    <input type="checkbox" name="is_checkbox" id="is_checkbox">
+                </div>
+                <div class="items">
+
+                </div>
+
+            </div>
+        </div>
     </div>
 
 
@@ -45,8 +60,9 @@
                     let state = response.state
                     let msg = response.msg
                     let data = response.data
+                    let questionnaire = data[0]
                     if (state == 200) {
-                        console.log(data)
+                        document.getElementById('header').innerHTML = questionnaire.title
                     }
                     else {
                         let error_str = ''
