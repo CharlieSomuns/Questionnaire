@@ -147,6 +147,7 @@
     let start_id = 0
     let g_state = 0
     let load_more = true
+    // 渲染问卷网页标签
     function create_quetionnaire_elements(data) {
         console.log(data)
         let questionnaires_el = document.getElementById('questionnaires')
@@ -182,6 +183,7 @@
             // alert('没有更多了')
         }
     }
+    // 获取问卷
     function get_questionnaires(state, start_id) {
         let xhr = new XMLHttpRequest()
         xhr.onreadystatechange = function (event) {
@@ -213,6 +215,7 @@
         }
         xhr.send()
     }
+    // 过滤按钮
     function filter(el, state) {
         let btns = document.getElementsByClassName('filter-btn')
         for (let btn of btns) {
@@ -224,16 +227,20 @@
         g_state = state
         get_questionnaires(g_state)
     }
+    // 加载更多
     function load_more_question() {
         load_more = true
         get_questionnaires(g_state, start_id)
     }
+    // 隐藏问卷表单
     function hide() {
         document.getElementById('popup').className = 'popup hide'
     }
+    // 打开问卷表单
     function open_new_form() {
         document.getElementById('popup').className = 'popup'
     }
+    // 创建新问卷
     function new_questionnaire() {
         let xhr = new XMLHttpRequest()
         xhr.onreadystatechange = function (event) {
@@ -269,6 +276,7 @@
         }
         xhr.send(JSON.stringify(req_data))
     }
+    // 删除问卷
     function delete_item(id) {
         let xhr = new XMLHttpRequest()
         xhr.onreadystatechange = function (event) {
@@ -301,7 +309,7 @@
         }
         xhr.send(JSON.stringify(req_data))
     }
-
+    // 发布问卷
     function publish(id) {
         let xhr = new XMLHttpRequest()
         xhr.onreadystatechange = function (event) {
@@ -334,6 +342,7 @@
         }
         xhr.send(JSON.stringify(req_data))
     }
+    // 进入问卷修改页面
     function goto_form(id){
         window.sessionStorage.setItem('questionnaire_id',id)
         window.location='/customer/question_form.html'
