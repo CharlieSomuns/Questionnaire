@@ -625,7 +625,7 @@ class AnswerResource(Resource):
         # 更新问卷可用数量
         for obj in objs:
             questionnaire = obj.questionnaire
-            questionnaire.count = questionnaire.count+1
+            questionnaire.free_count = questionnaire.free_count+1
             questionnaire.save()
         objs.delete()
         return json_response({
