@@ -843,9 +843,8 @@ class HomeQuestionnaireResource(Resource):
         start_id = abs(int(data.get('start_id', 0)))
         # 访问第几页
         page = abs(int(data.get('page', 1)))
-
         has_joined = Answer.objects.filter(userinfo=request.user.userinfo)
-        has_joined_questionnaire_ids = [item.id for item in has_joined]
+        has_joined_questionnaire_ids = [item.questionnaire.id for item in has_joined]
         # 搜索所有可参与的问卷
         all_objs = Questionnaire.objects.filter(
             id__gt=start_id, state=4, deadline__gt=timezone.now(), free_count__gt=0).exclude(id__in=has_joined_questionnaire_ids)
