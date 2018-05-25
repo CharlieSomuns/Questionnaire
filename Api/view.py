@@ -23,9 +23,9 @@ class ReigstCodeResource(Resource):
     def get(self, request, *args, **kwargs):
         regist_code = random.randint(10000, 100000)
         request.session['regist_code'] = regist_code
-        return HttpResponse(json.dumps({
+        return json_response({
             'regist_code': regist_code
-        }), content_type="application/json")
+        })
 
 
 # 用户信息
@@ -55,7 +55,7 @@ class UserResource(Resource):
                 data['job'] = getattr(userinfo, 'job', '')
                 data['salary'] = getattr(userinfo, 'salary', '')
                 # 用json把data转化成字符串,返回给客户端
-                return HttpResponse(json.dumps(data), content_type="application/json")
+                return json_response(data)
             # 判断是否是客户
             elif hasattr(user, 'customer'):
                 customer = user.customer
@@ -74,16 +74,12 @@ class UserResource(Resource):
                 data['industry'] = getattr(customer, 'industry', '')
                 data['description'] = getattr(customer, 'description', '')
                 # 用json把data转化称字符串,返回给客户端
-                return HttpResponse(json.dumps(data), content_type="application/json")
+                return json_response(data)
             else:
                 # 没有相关用户信息,返回空
-                return HttpResponse(json.dumps({
-                    "data": {}
-                }), content_type="application/json")
+                return json_response({})
         # 用户未登录,不允许查看信息
-        return HttpResponse(json.dumps({
-            "msg": '未登录'
-        }), content_type="application/json")
+        return not_authenticated()
 
     # 注册用户
     def put(self, request, *args, **kwargs):
@@ -91,7 +87,7 @@ class UserResource(Resource):
         username = data.get('username', '')
         password = data.get('password', '')
         regist_code = data.get('regist_code', '')
-        session_regist_code = request.session.get('regist_code', '')
+        session_regist_code = request.session.get('regist_code', 1111111)
         category = data.get('category', 'userinfo')
         ensure_password = data.get('ensure_password', '')
 
@@ -108,7 +104,7 @@ class UserResource(Resource):
         if regist_code != str(session_regist_code):
             errors['regist_code'] = '验证码不对'
         if errors:
-            return HttpResponse(json.dumps(errors), content_type='application/json')
+            return params_error(errors)
         user = User()
         user.username = username
         # 设置密码
@@ -125,11 +121,10 @@ class UserResource(Resource):
             customer.name = '客户名称'
             customer.user = user
             customer.save()
-
-        return HttpResponse(json.dumps({
-            "msg": "创建成功",
-            "user_id": user.id
-        }), content_type='application/json')
+        login(request, user)
+        return json_response({
+            "id": user.id
+        })
 
     # 更新用户
     def post(self, request, *args, **kwargs):
@@ -175,12 +170,10 @@ class UserResource(Resource):
                 customer.industry = data.get('industry', '')
                 customer.description = data.get('description', '')
                 customer.save()
-            return HttpResponse(json.dumps({
+            return json_response({
                 'msg': '更新成功'
-            }), content_type="application/json")
-        return HttpResponse(json.dumps({
-            'msg': '还未登录'
-        }), content_type="application/json")
+            })
+        return not_authenticated()
 
 
 # 用户登录与退出
@@ -191,9 +184,7 @@ class SessionResource(Resource):
             return json_response({
                 'msg': '已经登录'
             })
-        return not_authenticated({
-            'msg': '还未登录'
-        })
+        return not_authenticated()
 
     def put(self, request, *args, **kwargs):
         data = request.PUT
@@ -446,7 +437,7 @@ class QuestionResource(Resource):
         question_id = data.get('question_id', 0)
         # 判断需要修改的问题是否存在
         question_exits = Question.objects.filter(id=question_id, questionnaire__state__in=[
-                                                 0, 1, 2, 3], questionnaire__customer=request.user.customer)
+            0, 1, 2, 3], questionnaire__customer=request.user.customer)
         if not question_exits:
             return params_error({
                 'question_id': "该问题找不到,或者该问题所在问卷无法修改"
@@ -616,7 +607,7 @@ class AnswerResource(Resource):
         answer.is_done = False
         answer.save()
         # 更新可用问卷数量
-        questionnaire.count = questionnaire.count-1
+        questionnaire.free_count = questionnaire.free_count-1
         questionnaire.save()
 
         return json_response({
@@ -771,6 +762,8 @@ class AnswerItemResource(Resource):
         return json_response(data)
 
 # 审核管理员
+
+
 class CommentQuestionnaire(Resource):
     @superuser_required
     def get(self, request, *args, **kwargs):
@@ -925,10 +918,10 @@ class UserQuestionnaireResource(Resource):
 
         # 是否已完成
         is_done = data.get('is_done', False)
-        if is_done=='true':
-            is_done=True
+        if is_done == 'true':
+            is_done = True
         else:
-            is_done=False
+            is_done = False
 
         # 搜索所有可参与的问卷
         all_objs = Answer.objects.filter(
