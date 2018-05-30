@@ -1,18 +1,28 @@
 from django.conf.urls import url
 
-from Api.view import *
+from Api.common import *
+from Api.user import *
+from Api.admin import *
+from Api.customer import *
+
 from Api.resources import Register
 
 api = Register()
-api.regist(UserResource('user'))
+# 通用接口
 api.regist(ReigstCodeResource('regist_code'))
+api.regist(UserResource('user'))
 api.regist(SessionResource('session'))
-api.regist(QuestionnaireResource('customer_questionnaire'))
-api.regist(QuestionResource('customer_question'))
+api.regist(QuestionnaireResource('questionnaire'))
+
+# 客户
+api.regist(CustomerQuestionnaireResource('customer_questionnaire'))
+api.regist(CustomerQuestionResource('customer_question'))
+api.regist(CustomerQuestionnaireStateResource('questionnaire_state'))
+
+# 管理员
 api.regist(QuestionnaireCommentResource('questionnaire_comment'))
-api.regist(QuestionnaireStateResource('questionnaire_state'))
-api.regist(AnswerResource('answer'))
-api.regist(AnswerItemResource('answer_item'))
-api.regist(CommentQuestionnaire('questionnaire'))
-api.regist(HomeQuestionnaireResource('home_questionnaire'))
-api.regist(UserQuestionnaireResource('user_questionnaire'))
+
+# 用户
+api.regist(JoinQuestionnaireResource('questionnaire_join'))
+api.regist(AnswerQuestionnaireResource('questionnaire_answer'))
+

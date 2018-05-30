@@ -12,7 +12,7 @@
 
 **请求体**
 
-如果客户端需要上传文件，需要在请求头设置`Content-Type: multipart/form-data`。如果以json格式上传需要表明`Content-Type: application/json`。
+如果客户端需要上传文件，需要在请求头设置`Content-Type: multipart/form-data`。否则全部以json格式上传,并且表明`Content-Type: application/json`。
 
 例如:
 
@@ -137,9 +137,9 @@ response:
 
 ### 用户注册
 
-method: PUT
+method: `PUT`
 
-path: /api/v1/user
+path: `/api/v1/user`
 
 body: 
 - username: 用户名
@@ -162,9 +162,9 @@ response:
 
 ### 更新用户信息
 
-method: POST
+method: `POST`
 
-path: /api/v1/user
+path: `/api/v1/user`
 
 body: 
 - name: 姓名
@@ -194,10 +194,103 @@ response:
     state: 200,
     msg: 'OK',
     data: {
-        'msg': '更新成功'
+            'msg': '更新成功'
     }
 }
 ```
+
+## 登录退出
+
+### 获取登录信息
+
+method: `GET`
+
+path: `/api/v1/session`
+
+body: `none`
+
+response:
+
+```json
+//已经登录
+{
+    state: 200,
+    msg: 'OK',
+    data: {
+        'msg': '已经登录'
+    }
+}
+//未登录
+{
+    state: 401,
+    msg: '未登录',
+}
+```
+
+### 登录
+
+method: `PUT`
+
+path: `/api/v1/session`
+
+body: 
+- username:用户名
+- password:密码
+
+response:
+
+```json
+// 登录成功
+{
+    state: 200,
+    msg: 'OK',
+    data: {
+        'msg': '登录成功'
+    }
+}
+//登录失败
+{
+    state: 422,
+    msg: '参数错误',
+    data: {
+        'msg': '用户名或密码错误'
+    }
+}
+```
+
+### 退出
+
+method: `DELETE`
+
+path: `/api/v1/session`
+
+body: `none`
+
+response:
+
+```json
+{
+    state: 200,
+    msg: 'OK',
+    data: {
+        'msg': '退出成功'
+    }
+}
+```
+
+
+
+## 问卷列表
+
+### 管理员获得问卷列表
+
+### 用户获得问卷列表
+
+
+
+
+
+
 
 
 
