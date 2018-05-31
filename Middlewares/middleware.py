@@ -14,7 +14,7 @@ class DataConvert(MiddlewareMixin):
 
     def process_request(self, request):
         method = request.method
-        if 'application/json' in request.META['CONTENT_TYPE']:
+        if 'application/json' in request.content_type:
             # 把客户端上传的json数据转化成python字典
             try:
                 data = json.loads(request.body.decode())
@@ -23,7 +23,7 @@ class DataConvert(MiddlewareMixin):
                 return params_error({
                     'body': '请求数据类型不正确'
                 })
-        elif 'multipart/form-data' in request.META['CONTENT_TYPE']:
+        elif 'multipart/form-data' in request.content_type:
             # 把客户端已formdata上传的数据进行解析,通常客户端会把上传的文件也放在formdata中,
             # 所以下面的解析会把上传的文件也解析出来
             data, files = MultiPartParser(
