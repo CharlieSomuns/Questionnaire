@@ -67,16 +67,11 @@ class CustomerQuestionnaireResource(Resource):
             obj_dict = dict()
             obj_dict['id'] = obj.id
             obj_dict['title'] = obj.title
-            obj_dict['logo'] = obj.logo
-            obj_dict['datetime'] = datetime.strftime(obj.datetime, "%Y-%m-%d")
+            obj_dict['create_date'] = datetime.strftime(obj.create_date, "%Y-%m-%d")
             obj_dict['deadline'] = datetime.strftime(obj.deadline, "%Y-%m-%d")
-            obj_dict['catogory'] = obj.catogory
             obj_dict['state'] = obj.state
             obj_dict['quantity'] = obj.quantity
-            obj_dict['background'] = obj.background
-            # 读取全部标签
-            obj_dict['marks'] = [{'id': mark.id, 'name': mark.name,
-                                  'description': mark.description}for mark in obj.marks.all()]
+            obj_dict['free_count'] = obj.free_count
             if with_detail in ['true',True]:
                 # 构建问卷下的问题
                 obj_dict['questions'] = []
@@ -95,9 +90,16 @@ class CustomerQuestionnaireResource(Resource):
                     obj_dict['questions'].append(question_dict)
                 obj_dict['comments']= [{
                     'id': item.id,
-                    'datetime': datetime.strftime(item.datetime, '%Y-%m-%d'),
+                    'create_date': datetime.strftime(item.create_date, '%Y-%m-%d'),
                     'comment': item.comment
                 } for item in obj.questionnairecomment_set.all()]
+                obj_dict['suggests']=[
+                    {
+                        "comment":item.comment,
+                        "create_date":item.create_date.strftime('%Y-%m-%d')
+                    }
+                    for item in obj.questionnairesuggest_set.all()
+                ]
             # 将问卷添加到问卷列表中
             data.append(obj_dict)
 
@@ -113,9 +115,8 @@ class CustomerQuestionnaireResource(Resource):
         # 属性赋值
         questionnaire.customer = request.user.customer
         questionnaire.title = data.get('title', '标题')
-        questionnaire.logo = data.get('logo', '')
         # 特殊处理 创建时间使用当前时间
-        questionnaire.datetime = datetime.now()
+        questionnaire.create_date = datetime.now()
         # 特殊处理 截止时间
         try:
             # 获取截止时间字符串
@@ -127,24 +128,12 @@ class CustomerQuestionnaireResource(Resource):
             deadline = datetime.now()+timedelta(days=10)
 
         questionnaire.deadline = deadline
-        questionnaire.catogory = data.get('catogory', '')
         # 特殊处理 问卷创建时,状态为草稿
         questionnaire.state = 0
         # 特殊处理 默认问卷数量为1份
         questionnaire.quantity = int(data.get('quantity', 1))
         questionnaire.free_count = int(data.get('quantity', 1))
-        questionnaire.background = data.get('background', '')
         questionnaire.save()
-
-        # 特殊处理 问卷的标签
-        # 获取需要添加到问卷中的标签id列表
-        mark_ids = data.get('mark_ids', [])
-        # 根据id列表找出标签
-        marks = Mark.objects.filter(id__in=mark_ids)
-        # 把找出来的标签添加进问卷中
-        questionnaire.marks.set(marks)
-        questionnaire.save()
-
         return json_response({
             "id": questionnaire.id
         })
@@ -162,7 +151,6 @@ class CustomerQuestionnaireResource(Resource):
                 'questionnaire_id': "找不到对应的问卷,或者问卷不可修改"
             })
         questionnaire.title = data.get('title', '标题')
-        questionnaire.logo = data.get('logo', '')
         # 特殊处理 截止时间
         try:
             # 获取截止时间字符串
@@ -179,21 +167,11 @@ class CustomerQuestionnaireResource(Resource):
             return params_error({
                 'state': '状态不合法'
             })
-        questionnaire.catogory = data.get('catogory', '')
         # 特殊state
         questionnaire.state = state
 
         questionnaire.quantity = int(data.get('quantity', 1))
         questionnaire.free_count = int(data.get('quantity', 1))
-        questionnaire.background = data.get('background', '')
-        questionnaire.save()
-        # 特殊处理 问卷的标签
-        # 获取需要添加到问卷中的标签id列表
-        mark_ids = data.get('mark_ids', [])
-        # 根据id列表找出标签
-        marks = Mark.objects.filter(id__in=mark_ids)
-        # 把找出来的标签添加进问卷中
-        questionnaire.marks.set(marks)
         questionnaire.save()
 
         return json_response({

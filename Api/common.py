@@ -43,44 +43,50 @@ class UserResource(Resource):
                 # 构建json字典
                 data = dict()
                 data['user'] = user.id
-                data['age'] = getattr(userinfo, 'age', '')
-                data['name'] = getattr(userinfo, 'name', '')
-                data['gender'] = getattr(userinfo, 'gender', '')
-                data['phone'] = getattr(userinfo, 'phone', '')
-                data['email'] = getattr(userinfo, 'email', '')
-                data['address'] = getattr(userinfo, 'address', '')
+                data['category'] = 'userinfo'
+                data['age'] = userinfo.age
+                data['name'] = userinfo.name
+                data['gender'] = userinfo.gender
+                data['phone'] = userinfo.phone
+                data['email'] = userinfo.email
+                data['address'] = userinfo.address
                 if userinfo.birthday:
                     data['birthday'] = userinfo.birthday.strftime("%Y-%m-%d")
                 else:
                     data['birthday'] = datetime.now().strftime("%Y-%m-%d")
-                data['qq'] = getattr(userinfo, 'qq', '')
-                data['wechat'] = getattr(userinfo, 'wechat', '')
-                data['job'] = getattr(userinfo, 'job', '')
-                data['salary'] = getattr(userinfo, 'salary', '')
+                data['qq'] = userinfo.qq
+                data['wechat'] = userinfo.wechat
+                data['job'] = userinfo.job
+                data['salary'] = userinfo.salary
                 # 用json把data转化成字符串,返回给客户端
-                return json_response(data)
             # 判断是否是客户
             elif hasattr(user, 'customer'):
                 customer = user.customer
                 # 构建json字典
                 data = dict()
                 data['user'] = user.id
-                data['name'] = getattr(customer, 'name', '')
-                data['email'] = getattr(customer, 'email', '')
-                data['company'] = getattr(customer, 'company', '')
-                data['address'] = getattr(customer, 'address', '')
-                data['phone'] = getattr(customer, 'phone', '')
-                data['mobile'] = getattr(customer, 'mobile', '')
-                data['qq'] = getattr(customer, 'qq', '')
-                data['wechat'] = getattr(customer, 'wechat', '')
-                data['web'] = getattr(customer, 'web', '')
-                data['industry'] = getattr(customer, 'industry', '')
-                data['description'] = getattr(customer, 'description', '')
+                data['category'] = 'customer'
+                data['name'] = customer.name
+                data['email'] = customer.email
+                data['company'] = customer.company
+                data['address'] = customer.address
+                data['phone'] = customer.phone
+                data['mobile'] = customer.mobile
+                data['qq'] = customer.qq
+                data['wechat'] = customer.wechat
+                data['web'] = customer.web
+                data['industry'] = customer.industry
+                data['description'] = customer.description
                 # 用json把data转化称字符串,返回给客户端
-                return json_response(data)
+            elif user.is_superuser:
+                data = dict()
+                data['user'] = user.id
+                data['category'] = 'superuser'
             else:
                 # 没有相关用户信息,返回空
-                return json_response({})
+                data = {}
+            return json_response(data)
+
         # 用户未登录,不允许查看信息
         return not_authenticated()
 
@@ -108,28 +114,26 @@ class UserResource(Resource):
             errors['regist_code'] = '验证码不对'
         if errors:
             return params_error(errors)
-        user = User()
-        user.username = username
-        # 设置密码
-        user.set_password(password)
-        user.save()
-        # 根据用户类型,创建普通用户或者客户
-        if category == 'userinfo':
-            userinfo = UserInfo()
-            userinfo.user = user
-            userinfo.name = '姓名'
-            userinfo.save()
-        else:
-            customer = Customer()
-            customer.name = '客户名称'
-            customer.user = user
-            customer.save()
-        login(request, user)
-        return json_response({
-            "id": user.id
-        })
+        # 开启数据库事务
+        with atomic():
+            user = User()
+            user.username = username
+            # 设置密码
+            user.set_password(password)
+            user.save()
+            # 根据用户类型,创建普通用户或者客户
+            if category == 'userinfo':
+                UserInfo.create_userinfo(user=user, name='姓名')
+            else:
+                Customer.create_customer(user=user, name='名称')
+            login(request, user)
+            request.session['regist_code'] = False
+            return json_response({
+                "id": user.id
+            })
 
     # 更新用户
+    @atomic
     def post(self, request, *args, **kwargs):
         data = request.POST
         user = request.user
