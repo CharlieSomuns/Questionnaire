@@ -142,7 +142,7 @@ class UserResource(Resource):
             if hasattr(user, 'userinfo'):
                 userinfo = user.userinfo
                 userinfo.name = data.get('name', '姓名')
-                userinfo.age = data.get('age', '')
+                userinfo.age = int(data.get('age', 0))
                 userinfo.gender = data.get('gender', '')
                 userinfo.phone = data.get('phone', '')
                 userinfo.email = data.get('email', '')
