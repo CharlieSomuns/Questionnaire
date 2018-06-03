@@ -58,8 +58,9 @@ class CustomerQuestionnaireResource(Resource):
 
         if limit > 50:
             limit = 50
-
-        objs = Questionnaire.objects.filter(*Qs)[:limit]
+        all_objs = Questionnaire.objects.filter(*Qs)
+        pages = math.ceil(all_objs.count()/limit)
+        objs = all_objs[:limit]
 
         data = []
         for obj in objs:
@@ -67,12 +68,13 @@ class CustomerQuestionnaireResource(Resource):
             obj_dict = dict()
             obj_dict['id'] = obj.id
             obj_dict['title'] = obj.title
-            obj_dict['create_date'] = datetime.strftime(obj.create_date, "%Y-%m-%d")
+            obj_dict['create_date'] = datetime.strftime(
+                obj.create_date, "%Y-%m-%d")
             obj_dict['deadline'] = datetime.strftime(obj.deadline, "%Y-%m-%d")
             obj_dict['state'] = obj.state
             obj_dict['quantity'] = obj.quantity
             obj_dict['free_count'] = obj.free_count
-            if with_detail in ['true',True]:
+            if with_detail in ['true', True]:
                 # 构建问卷下的问题
                 obj_dict['questions'] = []
                 for question in obj.question_set.all():
@@ -88,22 +90,25 @@ class CustomerQuestionnaireResource(Resource):
                     } for item in question.questionitem_set.all()]
                     # 将问题添加到问卷的问题列表中
                     obj_dict['questions'].append(question_dict)
-                obj_dict['comments']= [{
+                obj_dict['comments'] = [{
                     'id': item.id,
                     'create_date': datetime.strftime(item.create_date, '%Y-%m-%d'),
                     'comment': item.comment
                 } for item in obj.questionnairecomment_set.all()]
-                obj_dict['suggests']=[
+                obj_dict['suggests'] = [
                     {
-                        "comment":item.comment,
-                        "create_date":item.create_date.strftime('%Y-%m-%d')
+                        "comment": item.comment,
+                        "create_date": item.create_date.strftime('%Y-%m-%d')
                     }
                     for item in obj.questionnairesuggest_set.all()
                 ]
             # 将问卷添加到问卷列表中
             data.append(obj_dict)
 
-        return json_response(data)
+        return json_response({
+            'pages': pages,
+            'objs': data
+        })
 
     @atomic
     @customer_required

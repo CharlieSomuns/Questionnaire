@@ -28,52 +28,55 @@ response:
 {
     state: 200,
     msg: 'OK',
-    data: [
-        {
-            id: '',// id
-            title: '',// 标题
-            logo: '',// logo
-            datetime: '',// 创建时间
-            deadline: '',// 截止时间
-            catogory: '',// 类别
-            state: '',// 状态
-            quantity: '',// 总数量
-            free_count: '',// 待参与数量
-            background: '',// 背景图
-            marks: [
+    data: {
+        page:'',//总页数
+        objs:[ //对象列表
                 {
-                    id:'',//标签id
-                    name:'', //标签名称
-                    description:'',//标签说明
-                }
-                ....
-            ],
-            // 如果请求了详细内容,name会把问题列表返回给客户端
-            // 问题列表
-            questions:[
-                {
-                    id:'',//问题id
-                    title:'',//标题
-                    is_checkbox:''//是否多选
-                    // 问题选项
-                    items:[
-                        id:'',//选项id
-                        content:''//选项内容
+                    id: '',// id
+                    title: '',// 标题
+                    logo: '',// logo
+                    datetime: '',// 创建时间
+                    deadline: '',// 截止时间
+                    catogory: '',// 类别
+                    state: '',// 状态
+                    quantity: '',// 总数量
+                    free_count: '',// 待参与数量
+                    background: '',// 背景图
+                    marks: [
+                        {
+                            id:'',//标签id
+                            name:'', //标签名称
+                            description:'',//标签说明
+                        }
+                        ....
+                    ],
+                    // 如果请求了详细内容,name会把问题列表返回给客户端
+                    // 问题列表
+                    questions:[
+                        {
+                            id:'',//问题id
+                            title:'',//标题
+                            is_checkbox:''//是否多选
+                            // 问题选项
+                            items:[
+                                id:'',//选项id
+                                content:''//选项内容
+                            ]
+                        }
+                        .....
+                    ]
+                    comments:[
+                        {
+                            id:'',//审核信息id
+                            datatime:'YYYY-MM-DD',//审核时间
+                            comment:'',//审核信息内容
+                        }
+                        .....
                     ]
                 }
                 .....
             ]
-            comments:[
-                {
-                    id:'',//审核信息id
-                    datatime:'YYYY-MM-DD',//审核时间
-                    comment:'',//审核信息内容
-                }
-                .....
-            ]
-        }
-        .....
-    ]
+    }
 }
 ```
 
