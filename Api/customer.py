@@ -77,7 +77,7 @@ class CustomerQuestionnaireResource(Resource):
             if with_detail in ['true', True]:
                 # 构建问卷下的问题
                 obj_dict['questions'] = []
-                for question in obj.question_set.all():
+                for question in obj.question_set.all().order_by('index'):
                     # 构建单个问题
                     question_dict = dict()
                     question_dict['id'] = question.id
@@ -307,4 +307,33 @@ class CustomerQuestionnaireStateResource(Resource):
         questionnaire.save()
         return json_response({
             'state': "发布成功"
+        })
+
+
+class CustomerQuestionIndexResource(Resource):
+    @atomic
+    @customer_required
+    def post(self, request, *args, **kwargs):
+        data = request.POST
+        questionnaire_exist = Questionnaire.objects.filter(id=data.get(
+            'questionnaire_id', 0), state__in=[0, 2, 3], customer=request.user.customer)
+        if not questionnaire_exist:
+            return params_error({
+                'questionnaire_id': "问卷不存在或者问卷不可修改"
+            })
+        questionnaire = questionnaire_exist[0]
+        question_exist = Question.objects.filter(
+            questionnaire=questionnaire, id=data.get('question_id', 0))
+        if not question_exist:
+            return params_error({
+                'question_id': '问题不存在或者问题不可修改'
+            })
+        question = question_exist[0]
+        index = int(data.get('index', 0))
+        questionnaire.state = 0
+        questionnaire.save()
+        question.index = index
+        question.save()
+        return json_response({
+            'msg': '更新成功'
         })

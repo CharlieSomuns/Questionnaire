@@ -18,6 +18,7 @@ api.regist(QuestionnaireResource('questionnaire'))
 api.regist(CustomerQuestionnaireResource('customer_questionnaire'))
 api.regist(CustomerQuestionResource('customer_question'))
 api.regist(CustomerQuestionnaireStateResource('questionnaire_state'))
+api.regist(CustomerQuestionIndexResource('question_index'))
 
 # 管理员
 api.regist(QuestionnaireCommentResource('questionnaire_comment'))
@@ -25,4 +26,3 @@ api.regist(QuestionnaireCommentResource('questionnaire_comment'))
 # 用户
 api.regist(JoinQuestionnaireResource('questionnaire_join'))
 api.regist(AnswerQuestionnaireResource('questionnaire_answer'))
-
