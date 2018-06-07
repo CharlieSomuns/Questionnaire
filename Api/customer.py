@@ -151,7 +151,7 @@ class CustomerQuestionnaireResource(Resource):
         questionnaire_id = int(data.get('questionnaire_id', 0))
         try:
             questionnaire = Questionnaire.objects.get(
-                id=questionnaire_id, customer=request.user.customer, state__in=[0, 1, 2, 3])
+                id=questionnaire_id, customer=request.user.customer, state__in=[0, 2, 3])
         except Exception as e:
             return params_error({
                 'questionnaire_id': "找不到对应的问卷,或者问卷不可修改"
@@ -242,7 +242,7 @@ class CustomerQuestionResource(Resource):
         question_id = data.get('id', 0)
         # 判断需要修改的问题是否存在
         question_exits = Question.objects.filter(id=question_id, questionnaire__state__in=[
-            0, 1, 2, 3], questionnaire__customer=request.user.customer)
+            0, 2, 3], questionnaire__customer=request.user.customer)
         if not question_exits:
             return params_error({
                 'id': "该问题找不到,或者该问题所在问卷无法修改"
