@@ -185,11 +185,16 @@ class Question(models.Model):
     """
     # 题目
     """
+    category_choices = [
+        ('radio', '单选'),
+        ('select', '多选'),
+    ]
     questionnaire = models.ForeignKey(
         'Questionnaire', help_text="问卷", on_delete=models.CASCADE)
     title = models.CharField(max_length=128, help_text="题纲")
     index = models.IntegerField(default=0, help_text="题目题号", db_index=True)
-    is_checkbox = models.BooleanField(default=False, help_text="是否多选")
+    category = models.CharField(
+        choices=category_choices, default='radio', max_length=16, help_text="是否多选")
 
 
 class QuestionItem(models.Model):

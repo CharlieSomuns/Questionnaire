@@ -156,8 +156,9 @@ path: `/api/v1/customer_question`
 body:
 - questionnaire_id: 问卷id
 - title: 提纲
-- is_checkbox: 是否多选
-- items: 选项列表 ['选项1','选项2',...]
+- category: 问题类型
+- index:题号
+- items: 选项列表 [{"content":'选项1'},{"content":'选项2'},...]
 
 response:
 
@@ -180,8 +181,9 @@ path: `/api/v1/customer_question`
 body:
 - question_id: 问题id
 - title: 提纲
-- is_checkbox: 是否多选
-- items: 选项列表 ['选项1','选项2',...]
+- category: 问题类型
+- index:题号
+- items: 选项列表 [{"content":'选项1'},{"content":'选项2'},...]
 
 response:
 

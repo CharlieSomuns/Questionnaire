@@ -82,7 +82,8 @@ class CustomerQuestionnaireResource(Resource):
                     question_dict = dict()
                     question_dict['id'] = question.id
                     question_dict['title'] = question.title
-                    question_dict['is_checkbox'] = question.is_checkbox
+                    question_dict['category'] = question.category
+                    question_dict['index'] = question.index
                     # 构建问题选项
                     question_dict['items'] = [{
                         "id": item.id,
@@ -214,7 +215,8 @@ class CustomerQuestionResource(Resource):
         question = Question()
         question.questionnaire = questionnaire
         question.title = data.get('title', '题纲')
-        question.is_checkbox = data.get('is_checkbox', False)
+        question.category = data.get('category','radio')
+        question.index = int(data.get('index', 0))
         question.save()
         # 修改问卷状态
         questionnaire.state = 0
@@ -226,7 +228,7 @@ class CustomerQuestionResource(Resource):
         for item in items:
             question_item = QuestionItem()
             question_item.question = question
-            question_item.content = item
+            question_item.content = item.get('content','')
             question_item.save()
 
         return json_response({
@@ -237,18 +239,19 @@ class CustomerQuestionResource(Resource):
     @customer_required
     def post(self, request, *args, **kwargs):
         data = request.POST
-        question_id = data.get('question_id', 0)
+        question_id = data.get('id', 0)
         # 判断需要修改的问题是否存在
         question_exits = Question.objects.filter(id=question_id, questionnaire__state__in=[
             0, 1, 2, 3], questionnaire__customer=request.user.customer)
         if not question_exits:
             return params_error({
-                'question_id': "该问题找不到,或者该问题所在问卷无法修改"
+                'id': "该问题找不到,或者该问题所在问卷无法修改"
             })
         # 更新问题的属性
         question = question_exits[0]
         question.title = data.get('title', '题纲')
-        question.is_checkbox = data.get('is_checkbox', False)
+        question.category = data.get('category', 'radio')
+        question.index = int(data.get('index', 0))
         question.save()
         # 更新问题所在问卷的状态
         questionnaire = question.questionnaire
@@ -260,7 +263,7 @@ class CustomerQuestionResource(Resource):
         for item in items:
             question_item = QuestionItem()
             question_item.question = question
-            question_item.content = item
+            question_item.content = item.get('content','')
             question_item.save()
 
         return json_response({
@@ -323,7 +326,7 @@ class CustomerQuestionIndexResource(Resource):
             })
         questionnaire = questionnaire_exist[0]
         question_exist = Question.objects.filter(
-            questionnaire=questionnaire, id=data.get('question_id', 0))
+            questionnaire=questionnaire, id=data.get('id', 0))
         if not question_exist:
             return params_error({
                 'question_id': '问题不存在或者问题不可修改'
