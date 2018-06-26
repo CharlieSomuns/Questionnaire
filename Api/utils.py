@@ -1,6 +1,10 @@
 import json
+import qrcode
+from tempfile import TemporaryFile
+import base64
 
 from django.http.response import HttpResponse
+import qrcode
 
 
 def method_not_allowed():
@@ -53,3 +57,11 @@ def permission_denied():
         'state': 403,
         'msg': '没有权限'
     }), content_type='application/json')
+
+
+def create_qrcode(data):
+    img = qrcode.make(data)
+    tmp = TemporaryFile()
+    img.save(tmp)
+    tmp.seek(0)
+    return base64.b64encode(tmp.read()).decode()
