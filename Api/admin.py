@@ -22,6 +22,98 @@ from Api.utils import *
 from Api.decorators import userinfo_required, customer_required, superuser_required
 
 
+# 问卷资源
+class AdminQuestionnaireResource(Resource):
+
+    @superuser_required
+    def get(self, request, *args, **kwargs):
+        data = request.GET
+        state = data.get('state', False)
+        limit = abs(int(data.get('limit', 15)))
+        start_id = data.get('start_id', False)
+        title = data.get('title', False)
+        create_time = data.get('create_time', False)
+        with_detail = data.get('with_detail', False)
+
+        Qs = []
+        if state:
+            state = [int(state)]
+        else:
+            state = [0, 1, 2, 3, 4]
+        Qs.append(Q(state__in=state))
+
+        if start_id:
+            start_id = int(start_id)
+        else:
+            start_id = 0
+        Qs.append(Q(id__gt=start_id))
+
+        if title:
+            Qs.append(Q(title__contains=title))
+
+        if create_time:
+            create_time = datetime.strptime(create_time, '%Y-%m-%d')
+            Qs.append(Q(datetime__gt=create_time))
+
+        if limit > 50:
+            limit = 50
+        all_objs = Questionnaire.objects.filter(*Qs)
+        pages = math.ceil(all_objs.count()/limit)
+        objs = all_objs[:limit]
+
+        data = []
+        for obj in objs:
+            # 构建单个问卷信息
+            obj_dict = dict()
+            obj_dict['id'] = obj.id
+            obj_dict['title'] = obj.title
+            obj_dict['create_date'] = datetime.strftime(
+                obj.create_date, "%Y-%m-%d")
+            obj_dict['deadline'] = datetime.strftime(obj.deadline, "%Y-%m-%d")
+            obj_dict['state'] = obj.state
+            obj_dict['quantity'] = obj.quantity
+            obj_dict['free_count'] = obj.free_count
+            obj_dict['customer'] = {
+                "id":obj.customer.id,
+                "name":obj.customer.name
+            }
+            if with_detail in ['true', True]:
+                # 构建问卷下的问题
+                obj_dict['questions'] = []
+                for question in obj.question_set.all().order_by('index'):
+                    # 构建单个问题
+                    question_dict = dict()
+                    question_dict['id'] = question.id
+                    question_dict['title'] = question.title
+                    question_dict['category'] = question.category
+                    question_dict['index'] = question.index
+                    # 构建问题选项
+                    question_dict['items'] = [{
+                        "id": item.id,
+                        "content": item.content
+                    } for item in question.questionitem_set.all()]
+                    # 将问题添加到问卷的问题列表中
+                    obj_dict['questions'].append(question_dict)
+                obj_dict['comments'] = [{
+                    'id': item.id,
+                    'create_date': datetime.strftime(item.create_date, '%Y-%m-%d'),
+                    'comment': item.comment
+                } for item in obj.questionnairecomment_set.all().order_by('create_date')]
+                obj_dict['suggests'] = [
+                    {
+                        "comment": item.comment,
+                        "create_date": item.create_date.strftime('%Y-%m-%d')
+                    }
+                    for item in obj.questionnairesuggest_set.all()
+                ]
+            # 将问卷添加到问卷列表中
+            data.append(obj_dict)
+
+        return json_response({
+            'pages': pages,
+            'objs': data
+        })
+
 class QuestionnaireCommentResource(Resource):
     @atomic
     @superuser_required
