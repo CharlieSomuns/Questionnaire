@@ -155,6 +155,10 @@ class WalletFlow(models.Model):
         default=True, help_text="方向,增加为True,减少为False")
     create_date = models.DateTimeField(auto_now=True, help_text="发生时间")
     reason = models.CharField(max_length=32, help_text="变动原因")
+    done = models.BooleanField(default=False, help_text="是否已完成")
+    payment = models.CharField(max_length=32, choices=[(
+        'alipay', '支付宝'), ('wechat', '微信')], help_text="支付方式")
+    paymentid = models.CharField(max_length=128, help_text="第三方支付id")
 
 
 class Questionnaire(models.Model):
