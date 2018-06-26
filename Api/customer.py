@@ -189,7 +189,7 @@ class CustomerQuestionnaireResource(Resource):
         data = request.DELETE
         ids = data.get('ids', [])
         objs = Questionnaire.objects.filter(
-            id__in=ids, customer=request.user.customer, state__in=[0, 1, 2, 3])
+            id__in=ids, customer=request.user.customer, state__in=[0, 2, 3])
         deleted_ids = [obj.id for obj in objs]
         objs.delete()
         return json_response({
@@ -276,7 +276,7 @@ class CustomerQuestionResource(Resource):
         data = request.DELETE
         ids = data.get('ids', [])
         objs = Question.objects.filter(id__in=ids, questionnaire__state__in=[
-            0, 1, 2, 3], questionnaire__customer=request.user.customer)
+            0, 2, 3], questionnaire__customer=request.user.customer)
 
         deleted_ids = [obj.id for obj in objs]
 
