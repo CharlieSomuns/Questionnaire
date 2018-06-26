@@ -32,8 +32,9 @@ class AdminQuestionnaireResource(Resource):
         limit = abs(int(data.get('limit', 15)))
         start_id = data.get('start_id', False)
         title = data.get('title', False)
-        create_time = data.get('create_time', False)
+        create_date = data.get('create_date', False)
         with_detail = data.get('with_detail', False)
+        page = abs(int(data.get('page', 1)))
 
         Qs = []
         if state:
@@ -51,15 +52,19 @@ class AdminQuestionnaireResource(Resource):
         if title:
             Qs.append(Q(title__contains=title))
 
-        if create_time:
-            create_time = datetime.strptime(create_time, '%Y-%m-%d')
-            Qs.append(Q(datetime__gt=create_time))
+        if create_date:
+            create_date = datetime.strptime(create_date, '%Y-%m-%d')
+            Qs.append(Q(create_date__gt=create_date))
 
         if limit > 50:
             limit = 50
         all_objs = Questionnaire.objects.filter(*Qs)
-        pages = math.ceil(all_objs.count()/limit)
-        objs = all_objs[:limit]
+        pages = math.ceil(all_objs.count()/limit) or 1
+        if page > pages:
+            page = pages
+        start = (page-1)*limit
+        end = page*limit
+        objs = all_objs[start:end]
 
         data = []
         for obj in objs:
@@ -74,8 +79,8 @@ class AdminQuestionnaireResource(Resource):
             obj_dict['quantity'] = obj.quantity
             obj_dict['free_count'] = obj.free_count
             obj_dict['customer'] = {
-                "id":obj.customer.id,
-                "name":obj.customer.name
+                "id": obj.customer.id,
+                "name": obj.customer.name
             }
             if with_detail in ['true', True]:
                 # 构建问卷下的问题
@@ -113,6 +118,7 @@ class AdminQuestionnaireResource(Resource):
             'pages': pages,
             'objs': data
         })
+
 
 class QuestionnaireCommentResource(Resource):
     @atomic
