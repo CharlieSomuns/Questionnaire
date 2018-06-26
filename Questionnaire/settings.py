@@ -126,3 +126,4 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 UPLOAD_DIR = os.path.join(BASE_DIR, 'Upload')
+DOMAIN = "http://192.168.8.107:8080"
