@@ -214,6 +214,30 @@ class SessionResource(Resource):
         })
 
 
+# 密码
+class PasswordResource(Resource):
+    def post(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return not_authenticated()
+        data = request.POST
+        password = data.get('password', '')
+        ensure_password = data.get('ensure_password', '')
+        error = dict()
+        if len(password) < 6:
+            error['password'] = "密码长度不小于6位"
+        if password != ensure_password:
+            error['ensure_password'] = "密码不匹配"
+        if error:
+            return params_error(error)
+        user = request.user
+        user.set_password(password)
+        user.save()
+        login(request, user)
+        return json_response({
+            "msg": "密码更新成功"
+        })
+
+
 class QuestionnaireResource(Resource):
     def get(self, request, *args, **kwargs):
         return json_response({})

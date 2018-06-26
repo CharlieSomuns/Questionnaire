@@ -13,6 +13,7 @@ api.regist(ReigstCodeResource('regist_code'))
 api.regist(UserResource('user'))
 api.regist(SessionResource('session'))
 api.regist(QuestionnaireResource('questionnaire'))
+api.regist(PasswordResource('password'))
 
 # 客户
 api.regist(CustomerQuestionnaireResource('customer_questionnaire'))
@@ -22,6 +23,7 @@ api.regist(CustomerQuestionIndexResource('question_index'))
 
 # 管理员
 api.regist(QuestionnaireCommentResource('questionnaire_comment'))
+api.regist(AdminQuestionnaireResource('admin_questionnaire'))
 
 # 用户
 api.regist(JoinQuestionnaireResource('questionnaire_join'))
