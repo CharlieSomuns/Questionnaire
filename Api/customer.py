@@ -15,6 +15,7 @@ from django.db.transaction import atomic
 from django.db.models import Q
 from django.utils import timezone
 
+from Questionnaire.settings import DOMAIN
 from Question.models import *
 from Api.resources import Resource
 from Api.utils import *
@@ -31,8 +32,9 @@ class CustomerQuestionnaireResource(Resource):
         limit = abs(int(data.get('limit', 15)))
         start_id = data.get('start_id', False)
         title = data.get('title', False)
-        create_time = data.get('create_time', False)
+        create_date = data.get('create_date', False)
         with_detail = data.get('with_detail', False)
+        page = abs(int(data.get('page', 1)))
 
         Qs = []
         if state:
@@ -50,17 +52,21 @@ class CustomerQuestionnaireResource(Resource):
         if title:
             Qs.append(Q(title__contains=title))
 
-        if create_time:
-            create_time = datetime.strptime(create_time, '%Y-%m-%d')
-            Qs.append(Q(datetime__gt=create_time))
+        if create_date:
+            create_date = datetime.strptime(create_date, '%Y-%m-%d')
+            Qs.append(Q(create_date__gt=create_date))
 
         Qs.append(Q(customer=request.user.customer))
 
         if limit > 50:
             limit = 50
         all_objs = Questionnaire.objects.filter(*Qs)
-        pages = math.ceil(all_objs.count()/limit)
-        objs = all_objs[:limit]
+        pages = math.ceil(all_objs.count()/limit) or 1
+        if page > pages:
+            page = pages
+        start = (page-1)*limit
+        end = page*limit
+        objs = all_objs[start:end]
 
         data = []
         for obj in objs:
@@ -215,7 +221,7 @@ class CustomerQuestionResource(Resource):
         question = Question()
         question.questionnaire = questionnaire
         question.title = data.get('title', '题纲')
-        question.category = data.get('category','radio')
+        question.category = data.get('category', 'radio')
         question.index = int(data.get('index', 0))
         question.save()
         # 修改问卷状态
@@ -228,7 +234,7 @@ class CustomerQuestionResource(Resource):
         for item in items:
             question_item = QuestionItem()
             question_item.question = question
-            question_item.content = item.get('content','')
+            question_item.content = item.get('content', '')
             question_item.save()
 
         return json_response({
@@ -263,7 +269,7 @@ class CustomerQuestionResource(Resource):
         for item in items:
             question_item = QuestionItem()
             question_item.question = question
-            question_item.content = item.get('content','')
+            question_item.content = item.get('content', '')
             question_item.save()
 
         return json_response({
@@ -340,3 +346,92 @@ class CustomerQuestionIndexResource(Resource):
         return json_response({
             'msg': '更新成功'
         })
+
+
+class WalletResource(Resource):
+    # 获取钱包信息
+    @customer_required
+    def get(self, request, *args, **kwargs):
+        wallet = Wallet.objects.get(customer__user=request.user)
+        result = {
+            "balance": wallet.balance
+        }
+        return json_response(result)
+
+    # 获取充值二维码
+    @customer_required
+    @atomic
+    def put(self, request, *args, **kwargs):
+        data = request.PUT
+        try:
+            amount = abs(int(data.get('amount', 0)))
+            if amount == 0:
+                raise Exception('金额不合法')
+        except Exception:
+            return params_error({
+                "amount": "金额不合法"
+            })
+        payment = data.get('payment', 'alipay')
+        # 保存支付记录
+        flow = WalletFlow()
+        flow.amount = amount
+        flow.payment = payment
+        flow.wallet = request.user.customer.wallet
+        flow.done = False
+        flow.reason="扫码支付"
+        flow.save()
+        qrcode = create_qrcode(
+            '{domain}/api/v1/paymentback?amount={amount}&payment={payment}&flow_id={flow_id}'.format(domain=DOMAIN,amount=amount, payment=payment, flow_id=flow.id))
+        return json_response({
+            "qrcode":  qrcode
+        })
+
+
+class WalletFlowResource(Resource):
+    # 获取历史记录
+    @customer_required
+    def get(self, request, *args, **kwargs):
+        data = request.GET
+        direction = int(data.get('direction', 0))
+        limit = abs(int(data.get('limit', 15)))
+        start_id = data.get('start_id', False)
+        create_date = data.get('create_date', False)
+        page = abs(int(data.get('page', 1)))
+
+        Qs = [Q(wallet__customer__user=request.user), Q(done=True)]
+        if direction == 0:
+            direction = False
+        else:
+            direction = True
+        Qs.append(Q(direction=direction))
+
+        if start_id:
+            start_id = int(start_id)
+        else:
+            start_id = 0
+        Qs.append(Q(id__gt=start_id))
+
+        if create_date:
+            create_date = datetime.strptime(create_date, '%Y-%m-%d')
+            Qs.append(Q(datetime__gt=create_date))
+
+        if limit > 50:
+            limit = 50
+        all_objs = WalletFlow.objects.filter(*Qs)
+        pages = math.ceil(all_objs.count()/limit) or 1
+        if page > pages:
+            page = pages
+        start = (page-1)*limit
+        end = page*limit
+        objs = all_objs[start:end]
+
+        result = {
+            "pages": 1,
+            "objs": [{
+                "id": obj.id,
+                "amount": obj.amount,
+                "reason": obj.reason,
+                "create_date": datetime.strftime(obj.create_date, '%Y-%m-%d %H:%M')
+            } for obj in objs]
+        }
+        return json_response(result)
