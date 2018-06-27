@@ -18,8 +18,6 @@ from Api.utils import *
 from Api.decorators import userinfo_required, customer_required, superuser_required
 
 # 问卷资源
-
-
 class UserQuestionnaireResource(Resource):
     @userinfo_required
     def get(self, request, *args, **kwargs):
@@ -184,6 +182,8 @@ class JoinQuestionnaireResource(Resource):
             questionnaire = obj.questionnaire
             questionnaire.free_count = questionnaire.free_count+1
             questionnaire.save()
+            # 删除用户选择该问卷的所有选项
+            Answer.objects.filter(userinfo=request.user.userinfo,item__question__quetionnaire=questionnaire)
         objs.delete()
         return json_response({
             'deleted_ids': deleted_ids
@@ -303,7 +303,7 @@ class AnswerQuestionnaireResource(Resource):
             question_dict['category'] = question.category
 
             answers_ids = [
-                obj.item.id for obj in AnswerItem.objects.filter(item__question=question)
+                obj.item.id for obj in AnswerItem.objects.filter(item__question=question,userinfo=request.user.userinfo)
             ]
             question_dict['items'] = [
                 {
