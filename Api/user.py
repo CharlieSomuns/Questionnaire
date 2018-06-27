@@ -316,3 +316,54 @@ class AnswerQuestionnaireResource(Resource):
             data['questions'].append(question_dict)
 
         return json_response(data)
+
+
+class UserPointResource(Resource):
+    @userinfo_required
+    def get(self, request, *args, **kwargs):
+        userinfo = request.user.userinfo
+        data = request.GET
+        direction = int(data.get('direction', 0))
+        limit = abs(int(data.get('limit', 15)))
+        start_id = data.get('start_id', False)
+        create_date = data.get('create_date', False)
+        page = abs(int(data.get('page', 1)))
+
+        Qs = [Q(point__userinfo=userinfo)]
+        if direction == 0:
+            direction = False
+        else:
+            direction = True
+        Qs.append(Q(direction=direction))
+
+        if start_id:
+            start_id = int(start_id)
+        else:
+            start_id = 0
+        Qs.append(Q(id__gt=start_id))
+
+        if create_date:
+            create_date = datetime.strptime(create_date, '%Y-%m-%d')
+            Qs.append(Q(datetime__gt=create_date))
+
+        if limit > 50:
+            limit = 50
+        all_objs = PointHistory.objects.filter(*Qs)
+        pages = math.ceil(all_objs.count()/limit) or 1
+        if page > pages:
+            page = pages
+        start = (page-1)*limit
+        end = page*limit
+        objs = all_objs[start:end]
+        point = userinfo.point
+        result = {
+            "balance": point.balance,
+            "pages": pages,
+            "objs": [{
+                "id": obj.id,
+                "quantity": obj.quantity,
+                "reason": obj.reason,
+                "create_date": datetime.strftime(obj.create_date, '%Y-%m-%d %H:%M')
+            } for obj in objs]
+        }
+        return json_response(result)

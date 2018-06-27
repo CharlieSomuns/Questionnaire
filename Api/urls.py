@@ -32,6 +32,7 @@ api.regist(AdminQuestionnaireResource('admin_questionnaire'))
 api.regist(UserQuestionnaireResource('user_questionnaire'))
 api.regist(JoinQuestionnaireResource('questionnaire_join'))
 api.regist(AnswerQuestionnaireResource('questionnaire_answer'))
+api.regist(UserPointResource('user_point'))
 
 # 支付回调
 api.regist(PaymentBack('paymentback'))

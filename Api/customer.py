@@ -426,7 +426,7 @@ class WalletFlowResource(Resource):
         objs = all_objs[start:end]
 
         result = {
-            "pages": 1,
+            "pages": pages,
             "objs": [{
                 "id": obj.id,
                 "amount": obj.amount,
