@@ -165,6 +165,8 @@ class JoinQuestionnaireResource(Resource):
         answer = answer_exist[0]
         answer.is_done = True
         answer.save()
+        # 增加用户积分
+        Point.update_point(request.user.userinfo, 10, '提交问卷')
         return json_response({
             "msg": "更新成功"
         })
@@ -241,7 +243,8 @@ class AnswerQuestionnaireResource(Resource):
             })
         question = item.question
         if question.category == 'radio':
-            AnswerItem.objects.filter(userinfo=userinfo, item__question=item.question).delete()
+            AnswerItem.objects.filter(
+                userinfo=userinfo, item__question=item.question).delete()
             answer_item = AnswerItem()
             answer_item.item = item
             answer_item.userinfo = userinfo
