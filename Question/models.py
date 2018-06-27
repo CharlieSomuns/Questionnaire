@@ -247,8 +247,7 @@ class AnswerItem(models.Model):
     # 回答题目选项
     """
     userinfo = models.ForeignKey('UserInfo', null=True, help_text="用户信息")
-    question = models.OneToOneField('Question', help_text="问题")
-    items = models.ManyToManyField('QuestionItem', help_text="选项")
+    item = models.ForeignKey('QuestionItem', help_text="选项")
 
 
 class QuestionnaireSuggest(models.Model):

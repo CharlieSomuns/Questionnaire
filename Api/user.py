@@ -17,6 +17,88 @@ from Api.resources import Resource
 from Api.utils import *
 from Api.decorators import userinfo_required, customer_required, superuser_required
 
+# 问卷资源
+
+
+class UserQuestionnaireResource(Resource):
+    @userinfo_required
+    def get(self, request, *args, **kwargs):
+        data = request.GET
+        limit = abs(int(data.get('limit', 15)))
+        start_id = data.get('start_id', False)
+        title = data.get('title', False)
+        create_date = data.get('create_date', False)
+        with_detail = data.get('with_detail', False)
+        page = abs(int(data.get('page', 1)))
+
+        Qs = [Q(state=4), Q(deadline__gte=datetime.now()), Q(free_count__gt=0)]
+        if start_id:
+            start_id = int(start_id)
+        else:
+            start_id = 0
+        Qs.append(Q(id__gt=start_id))
+
+        if title:
+            Qs.append(Q(title__contains=title))
+
+        if create_date:
+            create_date = datetime.strptime(create_date, '%Y-%m-%d')
+            Qs.append(Q(create_date__gt=create_date))
+
+        if limit > 50:
+            limit = 50
+        # 排除已参与的问卷
+        joined = Answer.objects.filter(userinfo=request.user.userinfo)
+        joined_ids = [obj.questionnaire.id for obj in joined]
+        all_objs = Questionnaire.objects.filter(*Qs).exclude(id__in=joined_ids)
+        pages = math.ceil(all_objs.count()/limit) or 1
+        if page > pages:
+            page = pages
+        start = (page-1)*limit
+        end = page*limit
+        objs = all_objs[start:end]
+
+        data = []
+        for obj in objs:
+            # 构建单个问卷信息
+            obj_dict = dict()
+            obj_dict['id'] = obj.id
+            obj_dict['title'] = obj.title
+            obj_dict['create_date'] = datetime.strftime(
+                obj.create_date, "%Y-%m-%d")
+            obj_dict['deadline'] = datetime.strftime(obj.deadline, "%Y-%m-%d")
+            obj_dict['state'] = obj.state
+            obj_dict['quantity'] = obj.quantity
+            obj_dict['free_count'] = obj.free_count
+            obj_dict['customer'] = {
+                "id": obj.customer.id,
+                "name": obj.customer.name
+            }
+            if with_detail in ['true', True]:
+                # 构建问卷下的问题
+                obj_dict['questions'] = []
+                for question in obj.question_set.all().order_by('index'):
+                    # 构建单个问题
+                    question_dict = dict()
+                    question_dict['id'] = question.id
+                    question_dict['title'] = question.title
+                    question_dict['category'] = question.category
+                    question_dict['index'] = question.index
+                    # 构建问题选项
+                    question_dict['items'] = [{
+                        "id": item.id,
+                        "content": item.content
+                    } for item in question.questionitem_set.all()]
+                    # 将问题添加到问卷的问题列表中
+                    obj_dict['questions'].append(question_dict)
+            # 将问卷添加到问卷列表中
+            data.append(obj_dict)
+
+        return json_response({
+            'pages': pages,
+            'objs': data
+        })
+
 
 class JoinQuestionnaireResource(Resource):
     @atomic
@@ -58,7 +140,7 @@ class JoinQuestionnaireResource(Resource):
         answer = Answer()
         answer.userinfo = request.user.userinfo
         answer.questionnaire = questionnaire
-        answer.datetime = datetime.now()
+        answer.create_date = datetime.now()
         answer.is_done = False
         answer.save()
         # 更新可用问卷数量
@@ -67,6 +149,24 @@ class JoinQuestionnaireResource(Resource):
 
         return json_response({
             'id': answer.id
+        })
+
+    @atomic
+    @userinfo_required
+    def post(self, request, *args, **kwargs):
+        data = request.POST
+        questionnaire_id = data.get('questionnaire_id', 0)
+        answer_exist = Answer.objects.filter(
+            questionnaire__id=questionnaire_id, userinfo=request.user.userinfo)
+        if not answer_exist:
+            return params_error({
+                "questionnaire_id": "问卷不存在"
+            })
+        answer = answer_exist[0]
+        answer.is_done = True
+        answer.save()
+        return json_response({
+            "msg": "更新成功"
         })
 
     @atomic
@@ -90,109 +190,88 @@ class JoinQuestionnaireResource(Resource):
     @userinfo_required
     def get(self, request, *args, **kwargs):
         data = request.GET
-        limit = abs(int(data.get('limit', 30)))
-        start_id = data.get('start_id', 0)
+        limit = abs(int(data.get('limit', 10)))
+        start_id = int(data.get('start_id', 0))
         is_done = data.get('is_done', False)
-        objs = Answer.objects.filter(
+        if is_done in ['true', True]:
+            is_done = True
+        else:
+            is_done = False
+        page = int(data.get('page', 1))
+        all_objs = Answer.objects.filter(
             id__gt=start_id, userinfo=request.user.userinfo, is_done=is_done)
-
+        count = all_objs.count()
+        pages = math.ceil(count/limit) or 1
+        if page > pages:
+            page = page
+        start = (page-1)*limit
+        end = page*limit
+        objs = all_objs[start:end]
+        result = {
+            'pages': pages,
+        }
         data = []
         for obj in objs:
             answer_dict = dict()
             answer_dict['id'] = obj.id
-            answer_dict['create_time'] = datetime.strftime(
-                obj.datetime, '%Y-%m-%d')
+            answer_dict['create_date'] = datetime.strftime(
+                obj.create_date, '%Y-%m-%d')
             answer_dict['is_done'] = obj.is_done
             answer_dict['questionnaire'] = {
                 'id': obj.questionnaire.id,
                 'title': obj.questionnaire.title
             }
             data.append(answer_dict)
-
-        return json_response(data)
+        result['objs'] = data
+        return json_response(result)
 
 
 class AnswerQuestionnaireResource(Resource):
-
-    def _save_answers(self, data, request):
-         # 判断问卷是否存在
-        questionnaire_id = data.get('questionnaire_id', 0)
-        questionnaire_exist = Questionnaire.objects.filter(
-            id=questionnaire_id, state=4, deadline__gt=timezone.now())
-        if not questionnaire_exist:
-            return params_error({
-                "questionnaire_id": "问卷不存在,或者不可提交答案"
-            })
-        # 验证问卷是否可以提交答案
-        questionnaire = questionnaire_exist[0]
-        has_joined = Answer.objects.filter(
-            questionnaire=questionnaire, userinfo=request.user.userinfo, is_done=False)
-        if not has_joined:
-            return params_error({
-                'questionnaire_id': "还没有参与该问卷,或者该问卷已经完成"
-            })
-
-        questions = data.get('questions', [])
-
-        # 可以提交答案的问题
-        question_ids = [item['question_id'] for item in questions]
-        questions_can_answer = Question.objects.filter(
-            id__in=question_ids, questionnaire=questionnaire)
-        questions_can_answer_ids = [obj.id for obj in questions_can_answer]
-        # 如果有回答过该问题,那么清空该问题答案
-        AnswerItem.objects.filter(
-            question__in=questions_can_answer, userinfo=request.user.userinfo).delete()
-
-        # data=[
-        #   {
-        #       "question_id":id,
-        #       "items":[1,2,3]
-        #   }
-        # ]
-
-        # 将用户的选项保存下来
-        for question in questions:
-            # 判断提交的问题是否合法
-            if question['question_id'] in questions_can_answer_ids:
-                question_obj = Question.objects.get(id=question['question_id'])
-                answer = AnswerItem()
-                answer.question = question_obj
-                answer.userinfo = request.user.userinfo
-                # 把该问题下选项找出来
-                items = QuestionItem.objects.filter(
-                    id__in=question['items'], question=question_obj)
-                if items.count() > 1 and question_obj.is_checkbox:
-                    answer.save()
-                    answer.items.set(items)
-                elif items.count() == 1:
-                    answer.save()
-                    answer.items.set(items)
-                else:
-                    return json_response({
-                        "warnning": '参数错误'
-                    })
-
-        # 用户保存,或者提交答案
-        answer = has_joined[0]
-        is_done = data.get('is_done', False)
-        answer.is_done = is_done
-        answer.save()
-
-        return json_response({'msg': "提交成功"})
 
     @atomic
     @userinfo_required
     def put(self, request, *args, **kwargs):
         data = request.PUT
-        response = self._save_answers(data, request)
-        return response
+        userinfo = request.user.userinfo
+        item_id = data.get('item_id', 1)
+        item = QuestionItem.objects.get(id=item_id)
+        if Answer.objects.filter(is_done=False, questionnaire=item.question.questionnaire, userinfo=userinfo).count() == 0:
+            return params_error({
+                "item_id": "不可提交该选项"
+            })
+        question = item.question
+        if question.category == 'radio':
+            AnswerItem.objects.filter(userinfo=userinfo, item__question=item.question).delete()
+            answer_item = AnswerItem()
+            answer_item.item = item
+            answer_item.userinfo = userinfo
+            answer_item.save()
+        else:
+            if AnswerItem.objects.filter(userinfo=userinfo, item=item).count() == 0:
+                answer_item = AnswerItem()
+                answer_item.item = item
+                answer_item.userinfo = userinfo
+                answer_item.save()
+        return json_response({
+            "msg": "选择成功"
+        })
 
     @atomic
     @userinfo_required
-    def post(self, request, *args, **kwargs):
-        data = request.POST
-        response = self._save_answers(data, request)
-        return response
+    def delete(self, request, *args, **kwargs):
+        data = request.DELETE
+        item_id = data.get('item_id', 0)
+        userinfo = request.user.userinfo
+        item = QuestionItem.objects.get(id=item_id)
+        if Answer.objects.filter(questionnaire=item.question.questionnaire, is_done=True, userinfo=userinfo):
+            return params_error({
+                "item_id": "不可删除该选项"
+            })
+        AnswerItem.objects.filter(
+            item=item, userinfo=userinfo).delete()
+        return json_response({
+            "msg": "移除成功"
+        })
 
     @userinfo_required
     def get(self, request, *args, **kwargs):
@@ -205,15 +284,32 @@ class AnswerQuestionnaireResource(Resource):
                 'questionnaire_id': "没有相关信息"
             })
         questionnaire = Questionnaire.objects.get(id=questionnaire_id)
-        answers = AnswerItem.objects.filter(
-            userinfo=request.user.userinfo, question__questionnaire=questionnaire)
-        data = [
-            {
-                "question_id": answer.question.id,
-                "title": answer.question.title,
-                "items": [{'id': item.id,'content':item.content} for item in answer.items.all()]
-            } for answer in answers
-        ]
+
+        data = dict()
+        data['id'] = questionnaire.id
+        data['title'] = questionnaire.title
+        data['customer'] = {
+            'name': questionnaire.customer.name
+        }
+        data['questions'] = []
+        for question in questionnaire.question_set.all():
+            question_dict = dict()
+            question_dict['id'] = question.id
+            question_dict['title'] = question.title
+            question_dict['index'] = question.index
+            question_dict['category'] = question.category
+
+            answers_ids = [
+                obj.item.id for obj in AnswerItem.objects.filter(item__question=question)
+            ]
+            question_dict['items'] = [
+                {
+                    "id": obj.id,
+                    "content": obj.content,
+                    "active": obj.id in answers_ids
+                }
+                for obj in question.questionitem_set.all()
+            ]
+            data['questions'].append(question_dict)
 
         return json_response(data)
-

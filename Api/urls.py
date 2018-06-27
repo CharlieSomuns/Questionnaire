@@ -29,6 +29,7 @@ api.regist(QuestionnaireCommentResource('questionnaire_comment'))
 api.regist(AdminQuestionnaireResource('admin_questionnaire'))
 
 # 用户
+api.regist(UserQuestionnaireResource('user_questionnaire'))
 api.regist(JoinQuestionnaireResource('questionnaire_join'))
 api.regist(AnswerQuestionnaireResource('questionnaire_answer'))
 
