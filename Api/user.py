@@ -183,7 +183,7 @@ class JoinQuestionnaireResource(Resource):
             questionnaire.free_count = questionnaire.free_count+1
             questionnaire.save()
             # 删除用户选择该问卷的所有选项
-            Answer.objects.filter(userinfo=request.user.userinfo,item__question__quetionnaire=questionnaire)
+            AnswerItem.objects.filter(userinfo=request.user.userinfo,item__question__questionnaire=questionnaire).delete()
         objs.delete()
         return json_response({
             'deleted_ids': deleted_ids
