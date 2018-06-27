@@ -1,3 +1,7 @@
+# 配置说明
+
+我的项目在`/home/ubuntu/projects/Questionnaire`中,遇到配置时需要改成自己的路径
+
 # nginx配置
 在server中添加location
 ```
@@ -17,6 +21,8 @@ server{
     }
 }
 ```
+> 注意: 上面的root后面的路径需要改成自己电脑中的路径
+
 # uwsgi 配置
 ```
 [uwsgi]
@@ -33,6 +39,7 @@ vacuum=true
 ;虚拟环境目录
 home=/home/ubuntu/.djenv
 ```
+> 注意: 上面的root后面的路径需要改成自己电脑中的路径
 
 # 安装依赖包
 
